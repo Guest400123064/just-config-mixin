@@ -1,0 +1,28 @@
+[project]
+name = "yacm"
+version = "0.1.0"
+description = "Yet another config mixin/manager."
+authors = [
+    {name = "guest400123064",email = "lgfz1003@icloud.com"}
+]
+license = {file = "LICENSE"}
+readme = "README.md"
+requires-python = ">=3.10"
+packages = [
+    {include = "yacm", from = "src"}
+]
+dependencies = [
+]
+
+[build-system]
+requires = ["poetry-core>=2.0.0,<3.0.0"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.ruff.lint]
+ignore = ["F401"]
+
+[tool.poetry.group.development.dependencies]
+pytest = "^8.4.1"
+pdoc = "^15.0.4"
+ruff = "^0.12.4"
+bpython = "^0.25"

@@ -1,0 +1,11 @@
+{
+  "_class_name": "Simple",
+  "_use_default_values": [
+    "z",
+    "x",
+    "y"
+  ],
+  "x": 1,
+  "y": "2",
+  "z": true
+}
