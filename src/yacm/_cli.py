@@ -1,6 +1,7 @@
 import argparse
 import inspect
 from typing import Any, Dict, Optional, Type, Union
+
 from ._core import ConfigMixin
 
 
