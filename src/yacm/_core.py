@@ -83,10 +83,10 @@ class ConfigMixin:
     config_name = None
     ignore_for_config = []
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"{self.__class__.__name__} {self.to_json_string()}"
 
-    def __getattr__(self, name: str):
+    def __getattr__(self, name: str) -> Any:
         r"""Create a shortcut to access the config attributes."""
 
         is_in_config = "_internal_dict" in self.__dict__ and hasattr(self.__dict__["_internal_dict"], name)
@@ -99,33 +99,33 @@ class ConfigMixin:
         raise AttributeError(msg)
 
     @property
-    def config(self) -> dict[str, Any]:
+    def config(self) -> FrozenDict:
         r"""Returns the config of the class as a frozen dictionary.
 
         Returns
         -------
-        dict[str, Any]
+        FrozenDict
             The config of the class as a frozen dictionary. This is a shortcut to access the config
             attributes of the class.
         """
         return self._internal_dict
 
-    def register_to_config(self, **kwargs):
+    def register_to_config(self, **kwargs) -> None:
         r"""Register keyword arguments to the configuration.
 
         There are two ways to register keyword arguments to the configuration:
 
-        - By explicitly calling `register_to_config` in the `__init__` method of the subclass.
-        - By using the `@register_to_config` decorator (for the `__init__` method of the subclass).
+        - By explicitly calling `register_to_config` in the ``__init__`` method of the subclass.
+        - By using the `@register_to_config` decorator (for the ``__init__`` method of the subclass).
 
-        It is recommended to use the `@register_to_config` decorator to register keyword arguments
+        It is recommended to use the ``@register_to_config`` decorator to register keyword arguments
         to automatically register keyword arguments to the configuration.
 
-        Note that, multiple calls to `register_to_config` will raise an error to prevent updating
+        Note that, multiple calls to ``register_to_config`` will raise an error to prevent updating
         the config after the class has been instantiated since it may cause unexpected inconsistencies
         between the config and the class attributes.
 
-        Please refer to the documentation of `register_to_config` decorator for usage examples.
+        Please refer to the documentation of ``register_to_config`` decorator for usage examples.
         """
         if self.config_name is None:
             msg = f"Make sure that {self.__class__} has defined a class attribute `config_name`."
@@ -140,7 +140,7 @@ class ConfigMixin:
 
         self._internal_dict = FrozenDict(kwargs)
 
-    def save_config(self, save_directory: str | PathLike, overwrite: bool = False):
+    def save_config(self, save_directory: str | PathLike, overwrite: bool = False) -> None:
         r"""Save a configuration object to the directory specified in ``save_directory``.
 
         The configuration is saved as a JSON file named as ``self.config_name`` in the directory specified
@@ -284,47 +284,48 @@ class ConfigMixin:
         hidden_config_dict = {k: v for k, v in original_dict.items() if k not in init_dict}
         
         return init_dict, unused_kwargs, hidden_config_dict
-    
-    @classmethod
-    def _dict_from_json_file(cls, json_file: str | PathLike):
-        """Load dictionary from JSON file."""
-        with open(json_file, "r", encoding="utf-8") as reader:
-            text = reader.read()
-        return json.loads(text)
 
     def to_json_string(self) -> str:
-        """
-        Serializes the configuration instance to a JSON string.
-        
-        Returns:
-            `str`: String containing all the attributes that make up the configuration instance in JSON format.
+        r"""Serializes the configurations to a JSON string.
+
+        In addition to the config parameters, the JSON string also includes a few metadata such as the class
+        name and which argument values were registered from default values. Metadata will have a leading
+        underscore to indicate that they are not part of the class initialization parameters.
+
+        Returns
+        -------
+        str
+            String containing all the attributes that make up the configuration instance in JSON format.
+            Note that ignored config parameters and private attributes are not included in the JSON string.
         """
         config_dict = self._internal_dict if hasattr(self, "_internal_dict") else {}
         config_dict = dict(config_dict)
         config_dict["_class_name"] = self.__class__.__name__
 
-        def to_json_saveable(value):
+        def cast(value):
             if isinstance(value, pathlib.Path):
                 value = value.as_posix()
             elif hasattr(value, "to_dict") and callable(value.to_dict):
                 value = value.to_dict()
             elif isinstance(value, list):
-                value = [to_json_saveable(v) for v in value]
+                value = [cast(v) for v in value]
             return value
 
-        config_dict = {k: to_json_saveable(v) for k, v in config_dict.items()}
-
-        return json.dumps(config_dict, indent=2, sort_keys=True)
+        return json.dumps(
+            {k: cast(v) for k, v in config_dict.items()},
+            indent=2,
+            sort_keys=True,
+        )
 
 
 def register_to_config(init):
     r"""Decorator for the init of classes inheriting from `ConfigMixin` for auto argument-registration.
 
-    Users should apply this decorator to the ``__init__(self, ...)`` method of the sub-class so that
-    all the arguments are automatically sent to ``self.register_to_config``. To ignore a specific argument
+    Users should apply this decorator to the ``__init__(self, ...)`` method of the subclass so that all
+    the arguments are automatically sent to ``self.register_to_config``. To ignore a specific argument
     accepted by the init but that shouldn't be registered in the config, use the ``ignore_for_config``
-    class variable. **Note that**, once decorated, all private arguments (beginning with an underscore) are
-    trashed and not sent to the init!
+    class variable. **Note that**, once decorated, all private arguments (beginning with an underscore)
+    are trashed and not sent to the init!
 
     Examples
     --------
