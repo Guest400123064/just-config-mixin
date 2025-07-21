@@ -58,7 +58,12 @@ class ConfigMixin:
     config_name = None
     ignore_for_config = []
 
+    def __repr__(self):
+        return f"{self.__class__.__name__} {self.to_json_string()}"
+
     def __getattr__(self, name: str):
+        r"""Create a shortcut to access the config attributes."""
+
         is_in_config = "_internal_dict" in self.__dict__ and hasattr(self.__dict__["_internal_dict"], name)
         is_attribute = name in self.__dict__
 
@@ -68,7 +73,35 @@ class ConfigMixin:
         msg = f"'{type(self).__name__}' object has no attribute '{name}'"
         raise AttributeError(msg)
 
+    @property
+    def config(self) -> dict[str, Any]:
+        r"""Returns the config of the class as a frozen dictionary.
+
+        Returns
+        -------
+        dict[str, Any]
+            The config of the class as a frozen dictionary. This is a shortcut to access the config
+            attributes of the class.
+        """
+        return self._internal_dict
+
     def register_to_config(self, **kwargs):
+        r"""Register keyword arguments to the configuration.
+
+        There are two ways to register keyword arguments to the configuration:
+
+        - By explicitly calling `register_to_config` in the `__init__` method of the subclass.
+        - By using the `@register_to_config` decorator (for the `__init__` method of the subclass).
+
+        It is recommended to use the `@register_to_config` decorator to register keyword arguments
+        to automatically register keyword arguments to the configuration.
+
+        Note that, multiple calls to `register_to_config` will raise an error to prevent updating
+        the config after the class has been instantiated since it may cause unexpected inconsistencies
+        between the config and the class attributes.
+
+        Please refer to the documentation of `register_to_config` decorator for usage examples.
+        """
         if self.config_name is None:
             msg = f"Make sure that {self.__class__} has defined a class attribute `config_name`."
             raise NotImplementedError(msg)
@@ -82,25 +115,43 @@ class ConfigMixin:
 
         self._internal_dict = FrozenDict(kwargs)
 
-    def save_config(self, save_directory: str | PathLike):
+    def save_config(self, save_directory: str | PathLike, overwrite: bool = False):
+        r"""Save a configuration object to the directory specified in ``save_directory``.
+
+        The configuration is saved as a JSON file named as ``self.config_name`` in the directory specified
+        in ``save_directory``.
+
+        It is recommended to save the configuration in the same directory as the main
+        objects, e.g., a model checkpoint, or other metadata files.
+
+        Parameters
+        ----------
+        save_directory : str or PathLike
+            Directory where the configuration JSON file, named as ``self.config_name``, is saved.
+        overwrite : bool, default=False
+            Whether to overwrite the configuration file if it already exists.
         """
-        Save a configuration object to the directory specified in `save_directory`.
-        
-        Args:
-            save_directory (`str` or `os.PathLike`):
-                Directory where the configuration JSON file is saved.
-        """
-        if pathlib.Path(save_directory).is_file():
-            raise AssertionError(f"Provided path ({save_directory}) should be a directory, not a file")
-        
-        pathlib.Path(save_directory).mkdir(parents=True, exist_ok=True)
-        
-        # Save using the predefined config name
-        output_config_file = pathlib.Path(save_directory) / self.config_name
-        
-        self.to_json_file(output_config_file)
-        print(f"Configuration saved in {output_config_file}")
-    
+        if self.config_name is None:
+            msg = f"Make sure that {self.__class__} has defined a class attribute `config_name`."
+            raise NotImplementedError(msg)
+
+        dest = pathlib.Path(save_directory)
+        if dest.is_file():
+            msg = f"Provided path ({save_directory}) should be a directory, not a file"
+            raise AssertionError(msg)
+
+        dest.mkdir(parents=True, exist_ok=True)
+        file = dest / self.config_name
+        if file.is_file() and not overwrite:
+            msg = (
+                f"Provided path ({save_directory}) already contains a file named {self.config_name}. "
+                "Please set `overwrite=True` to overwrite the existing file."
+            )
+            raise FileExistsError(msg)
+
+        with open(file, "w", encoding="utf-8") as writer:
+            writer.write(self.to_json_string())
+
     @classmethod
     def from_config(
         cls, 
@@ -108,7 +159,7 @@ class ConfigMixin:
         return_unused_kwargs: bool = False,
         **kwargs,
     ):
-        """
+        r"""
         Instantiate a Python class from a config dictionary.
         
         Args:
@@ -265,20 +316,7 @@ class ConfigMixin:
         with open(json_file, "r", encoding="utf-8") as reader:
             text = reader.read()
         return json.loads(text)
-    
-    def __repr__(self):
-        return f"{self.__class__.__name__} {self.to_json_string()}"
-    
-    @property
-    def config(self) -> dict[str, Any]:
-        """
-        Returns the config of the class as a frozen dictionary.
-        
-        Returns:
-            `Dict[str, Any]`: Config of the class.
-        """
-        return self._internal_dict
-    
+
     def to_json_string(self) -> str:
         """
         Serializes the configuration instance to a JSON string.
@@ -289,7 +327,7 @@ class ConfigMixin:
         config_dict = self._internal_dict if hasattr(self, "_internal_dict") else {}
         config_dict = dict(config_dict)
         config_dict["_class_name"] = self.__class__.__name__
-        
+
         def to_json_saveable(value):
             if isinstance(value, pathlib.Path):
                 value = value.as_posix()
@@ -301,17 +339,7 @@ class ConfigMixin:
 
         config_dict = {k: to_json_saveable(v) for k, v in config_dict.items()}
 
-        return json.dumps(config_dict, indent=2, sort_keys=True) + "\n"
-
-    def to_json_file(self, json_file_path: str | PathLike):
-        """
-        Save the configuration instance's parameters to a JSON file.
-        
-        Args:
-            json_file_path (`str` or `os.PathLike`): Path to the JSON file.
-        """
-        with open(json_file_path, "w", encoding="utf-8") as writer:
-            writer.write(self.to_json_string())
+        return json.dumps(config_dict, indent=2, sort_keys=True)
 
 
 def register_to_config(init):
