@@ -41,9 +41,7 @@ class FrozenDict(OrderedDict):
 
 
 class ConfigMixin:
-    r"""Base class for all configuration classes.
-
-    All configuration parameters are stored under `self.config`.
+    r"""Mixin class for automated configuration registration and IO.
 
     Attributes
     ----------
@@ -53,6 +51,33 @@ class ConfigMixin:
     ignore_for_config : list[str], default=[]
         Class attribute that specifies a list of attributes that should not be saved in the config. Should
         be overridden by the subclass.
+
+    Examples
+    --------
+    In this example, we have a model with 3 arguments:
+
+    - ``hidden_size``: The hidden size of the model.
+    - ``_num_layers``: The number of layers in the model.
+    - ``dropout``: The dropout rate of the model.
+
+    Among the three arguments, the number of layers is implicitly ignored by the decorator because of the leading
+    underscore; the ``dropout`` argument is explicitly based on the specification in ``ignore_for_config`` class
+    variable. The ``hidden_size`` argument is registered to the config.
+
+    >>> class MyModel(nn.Module, ConfigMixin):
+    ...     config_name = "my_model_config.json"
+    ...     ignore_for_config = ["dropout"]
+    ...
+    ...     @register_to_config
+    ...     def __init__(self, hidden_size: int = 768, _num_layers: int = 12, dropout: float = 0.1):
+    ...         super().__init__()
+    ...         self.hidden_size = hidden_size
+    ...         self.num_layers = _num_layers
+    ...         self.dropout = dropout  # This will be ignored because of the specification in `ignore_for_config`
+    ...
+    >>> model = MyModel(hidden_size=1024, num_layers=20, dropout=0.2)
+    >>> model.config
+    {'hidden_size': 1024}
     """
 
     config_name = None
@@ -70,7 +95,7 @@ class ConfigMixin:
         if is_in_config and not is_attribute:
             return self._internal_dict[name]
 
-        msg = f"'{type(self).__name__}' object has no attribute '{name}'"
+        msg = f"`{type(self).__name__}` object has no attribute `{name}`"
         raise AttributeError(msg)
 
     @property
@@ -191,62 +216,12 @@ class ConfigMixin:
             return (model, unused_kwargs)
         else:
             return model
-    
-    @classmethod
-    def load_config(
-        cls,
-        pretrained_model_name_or_path: str | PathLike,
-        return_unused_kwargs: bool = False,
-        **kwargs,
-    ) -> dict[str, Any] | tuple[dict[str, Any], dict[str, Any]]:
-        """
-        Load a model or scheduler configuration from a local directory or file.
-        
-        Args:
-            pretrained_model_name_or_path (`str` or `os.PathLike`):
-                Path to a directory containing a config file or path to a config file.
-            return_unused_kwargs (`bool`, optional): Whether unused keyword arguments should be returned.
-        
-        Returns:
-            `dict` or tuple of (dict, dict): Configuration dictionary or tuple with unused kwargs.
-        """
-        pretrained_model_name_or_path = str(pretrained_model_name_or_path)
-        
-        if cls.config_name is None:
-            raise ValueError(
-                "`config_name` is not defined. Make sure to define `config_name` in a class inheriting from `ConfigMixin`"
-            )
-        
-        # Determine config file path
-        if pathlib.Path(pretrained_model_name_or_path).is_file():
-            config_file = pretrained_model_name_or_path
-        elif pathlib.Path(pretrained_model_name_or_path).is_dir():
-            config_file = pathlib.Path(pretrained_model_name_or_path) / cls.config_name
-            if not config_file.is_file():
-                raise EnvironmentError(
-                    f"Error: no file named {cls.config_name} found in directory {pretrained_model_name_or_path}."
-                )
-        else:
-            raise EnvironmentError(
-                f"Error: {pretrained_model_name_or_path} is not a valid file or directory."
-            )
-        
-        # Load config from JSON file
-        try:
-            config_dict = cls._dict_from_json_file(config_file)
-        except (json.JSONDecodeError, UnicodeDecodeError):
-            raise EnvironmentError(f"It looks like the config file at '{config_file}' is not a valid JSON file.")
-        
-        if return_unused_kwargs:
-            return (config_dict, kwargs)
-        else:
-            return config_dict
-    
+
     @staticmethod
     def _get_init_keys(input_class):
         """Get the parameter names from a class's __init__ method."""
         return set(dict(inspect.signature(input_class.__init__).parameters).keys())
-    
+
     @classmethod
     def extract_init_dict(cls, config_dict, **kwargs):
         """
