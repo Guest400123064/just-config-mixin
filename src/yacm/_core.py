@@ -17,25 +17,37 @@ class FrozenDict(OrderedDict):
             setattr(self, key, value)
 
     def __delitem__(self, *args, **kwargs):
-        raise Exception(f"You cannot use `__delitem__` on a {self.__class__.__name__} instance.")
-    
+        raise Exception(
+            f"You cannot use `__delitem__` on a {self.__class__.__name__} instance."
+        )
+
     def setdefault(self, *args, **kwargs):
-        raise Exception(f"You cannot use `setdefault` on a {self.__class__.__name__} instance.")
-    
+        raise Exception(
+            f"You cannot use `setdefault` on a {self.__class__.__name__} instance."
+        )
+
     def pop(self, *args, **kwargs):
-        raise Exception(f"You cannot use `pop` on a {self.__class__.__name__} instance.")
-    
+        raise Exception(
+            f"You cannot use `pop` on a {self.__class__.__name__} instance."
+        )
+
     def update(self, *args, **kwargs):
-        raise Exception(f"You cannot use `update` on a {self.__class__.__name__} instance.")
-    
+        raise Exception(
+            f"You cannot use `update` on a {self.__class__.__name__} instance."
+        )
+
     def __setattr__(self, name, value):
         if hasattr(self, "__frozen") and self.__frozen:
-            raise Exception(f"You cannot use `__setattr__` on a {self.__class__.__name__} instance.")
+            raise Exception(
+                f"You cannot use `__setattr__` on a {self.__class__.__name__} instance."
+            )
         super().__setattr__(name, value)
-    
+
     def __setitem__(self, name, value):
         if hasattr(self, "__frozen") and self.__frozen:
-            raise Exception(f"You cannot use `__setitem__` on a {self.__class__.__name__} instance.")
+            raise Exception(
+                f"You cannot use `__setitem__` on a {self.__class__.__name__} instance."
+            )
         super().__setitem__(name, value)
 
 
@@ -92,7 +104,9 @@ class ConfigMixin:
     def __getattr__(self, name: str) -> Any:
         r"""Create a shortcut to access the config attributes."""
 
-        is_in_config = "_internal_dict" in self.__dict__ and hasattr(self.__dict__["_internal_dict"], name)
+        is_in_config = "_internal_dict" in self.__dict__ and hasattr(
+            self.__dict__["_internal_dict"], name
+        )
         is_attribute = name in self.__dict__
 
         if is_in_config and not is_attribute:
@@ -143,7 +157,9 @@ class ConfigMixin:
 
         self._internal_dict = FrozenDict(kwargs)
 
-    def save_config(self, save_directory: str | PathLike, overwrite: bool = False) -> None:
+    def save_config(
+        self, save_directory: str | PathLike, overwrite: bool = False
+    ) -> None:
         r"""Save a configuration object to the directory specified in ``save_directory``.
 
         The configuration is saved as a JSON file named as ``self.config_name`` in the directory
@@ -209,13 +225,13 @@ class ConfigMixin:
 
         # Create model instance
         model = cls(**init_dict)
-        
+
         # Register hidden config parameters
         model.register_to_config(**hidden_dict)
-        
+
         # Add hidden kwargs to unused_kwargs
         unused_kwargs = {**unused_kwargs, **hidden_dict}
-        
+
         if return_unused_kwargs:
             return (model, unused_kwargs)
         else:
@@ -230,28 +246,28 @@ class ConfigMixin:
     def extract_init_dict(cls, config_dict, **kwargs):
         """
         Extract initialization dictionary from config_dict and kwargs.
-        
+
         Returns:
             Tuple of (init_dict, unused_kwargs, hidden_dict)
         """
         # Copy original config dict
         original_dict = dict(config_dict.items())
-        
+
         # Get expected config attributes from __init__ signature
         expected_keys = cls._get_init_keys(cls)
         expected_keys.remove("self")
-        
+
         # Remove general kwargs if present in dict
         if "kwargs" in expected_keys:
             expected_keys.remove("kwargs")
-        
+
         # Remove keys to be ignored
         if len(cls.ignore_for_config) > 0:
             expected_keys = expected_keys - set(cls.ignore_for_config)
-        
+
         # Remove private attributes
         config_dict = {k: v for k, v in config_dict.items() if not k.startswith("_")}
-        
+
         # Create keyword arguments that will be passed to __init__
         init_dict = {}
         for key in expected_keys:
@@ -259,34 +275,36 @@ class ConfigMixin:
             # it should overwrite existing config dict key
             if key in kwargs and key in config_dict:
                 config_dict[key] = kwargs.pop(key)
-            
+
             if key in kwargs:
                 # Overwrite key
                 init_dict[key] = kwargs.pop(key)
             elif key in config_dict:
                 # Use value from config dict
                 init_dict[key] = config_dict.pop(key)
-        
+
         # Give nice warning if unexpected values have been passed
         if len(config_dict) > 0:
             print(
                 f"Warning: The config attributes {list(config_dict.keys())} were passed to {cls.__name__}, "
                 "but are not expected and will be ignored."
             )
-        
+
         # Give nice info if config attributes are initialized to default values
         passed_keys = set(init_dict.keys())
         if len(expected_keys - passed_keys) > 0:
             print(
                 f"Info: {expected_keys - passed_keys} was not found in config. Values will be initialized to default values."
             )
-        
+
         # Define unused keyword arguments
         unused_kwargs = {**config_dict, **kwargs}
-        
+
         # Define "hidden" config parameters
-        hidden_config_dict = {k: v for k, v in original_dict.items() if k not in init_dict}
-        
+        hidden_config_dict = {
+            k: v for k, v in original_dict.items() if k not in init_dict
+        }
+
         return init_dict, unused_kwargs, hidden_config_dict
 
     def get_config_json(self) -> str:
@@ -378,12 +396,19 @@ def register_to_config(init):
             return name not in ignore and not name.startswith("_")
 
         signature = inspect.signature(init)
-        default_kwargs = {name: param.default for name, param in islice(signature.parameters.items(), 1, None)}
-        given_kwargs = {name: arg for name, arg in zip(islice(signature.parameters.keys(), 1, None), args)} | kwargs
+        default_kwargs = {
+            name: param.default
+            for name, param in islice(signature.parameters.items(), 1, None)
+        }
+        given_kwargs = {
+            name: arg
+            for name, arg in zip(islice(signature.parameters.keys(), 1, None), args)
+        } | kwargs
 
         tracked_kwargs = {
             "_use_default_values": [
-                name for name in set(default_kwargs.keys()) - set(given_kwargs.keys())
+                name
+                for name in set(default_kwargs.keys()) - set(given_kwargs.keys())
                 if is_tracked(name)
             ]
         }
