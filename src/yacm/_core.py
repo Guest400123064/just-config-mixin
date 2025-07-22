@@ -379,15 +379,14 @@ def register_to_config(init):
 
         signature = inspect.signature(init)
         default_kwargs = {name: param.default for name, param in islice(signature.parameters.items(), 1, None)}
-
         given_kwargs = {name: arg for name, arg in zip(islice(signature.parameters.keys(), 1, None), args)} | kwargs
+
         tracked_kwargs = {
             "_use_default_values": [
                 name for name in set(default_kwargs.keys()) - set(given_kwargs.keys())
                 if is_tracked(name)
             ]
         }
-
         init_kwargs = default_kwargs | given_kwargs
         for name, value in init_kwargs.items():
             if is_tracked(name):
