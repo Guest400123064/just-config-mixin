@@ -3,10 +3,9 @@ import inspect
 import json
 import pathlib
 from collections import OrderedDict
-from typing import TYPE_CHECKING, Any
-
-if TYPE_CHECKING:
-    from os import PathLike
+from itertools import islice
+from os import PathLike
+from typing import Any
 
 
 class FrozenDict(OrderedDict):
@@ -77,7 +76,11 @@ class ConfigMixin:
     ...
     >>> model = MyModel(hidden_size=1024, num_layers=20, dropout=0.2)
     >>> model.config
-    {'hidden_size': 1024}
+    FrozenDict([('_use_default_values', []), ('hidden_size', 1024)])
+    >>> model.num_layers
+    20
+    >>> model.dropout
+    0.1
     """
 
     config_name = None
@@ -143,8 +146,8 @@ class ConfigMixin:
     def save_config(self, save_directory: str | PathLike, overwrite: bool = False) -> None:
         r"""Save a configuration object to the directory specified in ``save_directory``.
 
-        The configuration is saved as a JSON file named as ``self.config_name`` in the directory specified
-        in ``save_directory``.
+        The configuration is saved as a JSON file named as ``self.config_name`` in the directory
+        specified in ``save_directory``.
 
         It is recommended to save the configuration in the same directory as the main
         objects, e.g., a model checkpoint, or other metadata files.
@@ -175,34 +178,35 @@ class ConfigMixin:
             raise FileExistsError(msg)
 
         with open(file, "w", encoding="utf-8") as writer:
-            writer.write(self.to_json_string())
+            writer.write(self.get_config_json())
 
     @classmethod
     def from_config(
-        cls, 
-        config: FrozenDict | dict[str, Any],  # noqa: F821
+        cls,
+        save_directory: str | PathLike | None = None,
+        config: dict[str, Any] | None = None,
         return_unused_kwargs: bool = False,
         **kwargs,
     ):
-        r"""
-        Instantiate a Python class from a config dictionary.
-        
-        Args:
-            config (`Dict[str, Any]`): A config dictionary from which the Python class is instantiated.
-            return_unused_kwargs (`bool`, optional): Whether kwargs that are not consumed should be returned.
-            kwargs: Can be used to update the configuration object and overwrite same named arguments.
-        
-        Returns:
-            Instance of the class or tuple of (instance, unused_kwargs) if return_unused_kwargs=True.
+        r"""Instantiate the current class from a config dictionary.
+
+        Parameters
+        ----------
+        save_directory : str or PathLike, default=None
+            Directory where the configuration JSON file, named as ``self.config_name``, is saved.
+        config : FrozenDict | dict[str, Any]
+            A config dictionary from which the Python class is instantiated.
+        return_unused_kwargs : bool, default=False
+            Whether kwargs that are not consumed should be returned.
+        kwargs : dict[str, Any]
+            Can be used to update the configuration object and overwrite same named arguments.
+
+        Returns
+        -------
+        Instance of the class or tuple of (instance, unused_kwargs) if return_unused_kwargs=True.
         """
-        if config is None:
-            raise ValueError("Please make sure to provide a config as the first positional argument.")
-        
-        if not isinstance(config, dict):
-            raise ValueError("Config must be a dictionary.")
-        
         init_dict, unused_kwargs, hidden_dict = cls.extract_init_dict(config, **kwargs)
-        
+
         # Create model instance
         model = cls(**init_dict)
         
@@ -285,7 +289,7 @@ class ConfigMixin:
         
         return init_dict, unused_kwargs, hidden_config_dict
 
-    def to_json_string(self) -> str:
+    def get_config_json(self) -> str:
         r"""Serializes the configurations to a JSON string.
 
         In addition to the config parameters, the JSON string also includes a few metadata such as the class
@@ -350,9 +354,13 @@ def register_to_config(init):
     ...         self.num_layers = _num_layers
     ...         self.dropout = dropout  # This will be ignored because of the specification in `ignore_for_config`
     ...
-    >>> model = MyModel(hidden_size=1024, num_layers=20, dropout=0.2)
+    >>> model = MyModel(hidden_size=1024, _num_layers=20, dropout=0.2)
     >>> model.config
-    {'hidden_size': 1024}
+    FrozenDict([('_use_default_values', []), ('hidden_size', 1024)])
+    >>> model.num_layers
+    20
+    >>> model.dropout
+    0.2
     """
 
     @functools.wraps(init)
@@ -364,35 +372,28 @@ def register_to_config(init):
             )
             raise RuntimeError(msg)
 
-        init_kwargs = {k: v for k, v in kwargs.items() if not k.startswith("_")}
-        config_init_kwargs = {k: v for k, v in kwargs.items() if k.startswith("_")}
+        ignore = set(getattr(self, "ignore_for_config", []))
 
-        ignore = getattr(self, "ignore_for_config", [])
-        # Get positional arguments aligned with kwargs
-        new_kwargs = {}
+        def is_tracked(name: str) -> bool:
+            return name not in ignore and not name.startswith("_")
+
         signature = inspect.signature(init)
-        parameters = {
-            name: p.default for i, (name, p) in enumerate(signature.parameters.items()) if i > 0 and name not in ignore
+        default_kwargs = {name: param.default for name, param in islice(signature.parameters.items(), 1, None)}
+
+        given_kwargs = {name: arg for name, arg in zip(islice(signature.parameters.keys(), 1, None), args)} | kwargs
+        tracked_kwargs = {
+            "_use_default_values": [
+                name for name in set(default_kwargs.keys()) - set(given_kwargs.keys())
+                if is_tracked(name)
+            ]
         }
-        
-        for arg, name in zip(args, parameters.keys()):
-            new_kwargs[name] = arg
-        
-        # Then add all kwargs
-        new_kwargs.update(
-            {
-                k: init_kwargs.get(k, default)
-                for k, default in parameters.items()
-                if k not in ignore and k not in new_kwargs
-            }
-        )
-        
-        # Take note of the parameters that were not present in the loaded config
-        if len(set(new_kwargs.keys()) - set(init_kwargs)) > 0:
-            new_kwargs["_use_default_values"] = list(set(new_kwargs.keys()) - set(init_kwargs))
-        
-        new_kwargs = {**config_init_kwargs, **new_kwargs}
-        getattr(self, "register_to_config")(**new_kwargs)
-        init(self, *args, **init_kwargs)
-    
+
+        init_kwargs = default_kwargs | given_kwargs
+        for name, value in init_kwargs.items():
+            if is_tracked(name):
+                tracked_kwargs[name] = value
+
+        getattr(self, "register_to_config")(**tracked_kwargs)
+        init(self, **init_kwargs)
+
     return inner_init
