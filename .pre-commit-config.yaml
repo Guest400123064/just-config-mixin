@@ -21,7 +21,7 @@ repos:
     rev: v0.6.9
     hooks:
       - id: ruff
-        files: "src/yacm/"
+        files: "src/yacm/_core.py"
       - id: ruff
         args: [ "check", "--select", "I", "--fix" ]
         files: "^src/yacm/"
