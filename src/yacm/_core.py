@@ -5,7 +5,9 @@ import pathlib
 from collections import OrderedDict
 from itertools import islice
 from os import PathLike
-from typing import Any
+from typing import Any, TypeVar
+
+_Self = TypeVar("_Self", bound="ConfigMixin")
 
 
 class FrozenDict(OrderedDict):
@@ -198,20 +200,17 @@ class ConfigMixin:
 
     @classmethod
     def from_config(
-        cls,
-        save_directory: str | PathLike | None = None,
-        config: dict[str, Any] | None = None,
+        cls: type[_Self],
+        save_directory: str | PathLike,
         return_unused_kwargs: bool = False,
         **kwargs,
-    ):
+    ) -> _Self | tuple[_Self, dict[str, Any]]:
         r"""Instantiate the current class from a config dictionary.
 
         Parameters
         ----------
         save_directory : str or PathLike, default=None
             Directory where the configuration JSON file, named as ``self.config_name``, is saved.
-        config : FrozenDict | dict[str, Any]
-            A config dictionary from which the Python class is instantiated.
         return_unused_kwargs : bool, default=False
             Whether kwargs that are not consumed should be returned.
         kwargs : dict[str, Any]
@@ -221,6 +220,14 @@ class ConfigMixin:
         -------
         Instance of the class or tuple of (instance, unused_kwargs) if return_unused_kwargs=True.
         """
+        dest = pathlib.Path(save_directory)
+        if dest.is_file():
+            msg = f"Provided path ({save_directory}) should be a directory, not a file"
+            raise AssertionError(msg)
+
+        with open(dest / cls.config_name, encoding="utf-8") as reader:
+            config = json.load(reader)
+
         init_dict, unused_kwargs, hidden_dict = cls.extract_init_dict(config, **kwargs)
 
         # Create model instance
@@ -399,8 +406,9 @@ def register_to_config(init):
         default_kwargs = {
             name: param.default
             for name, param in islice(signature.parameters.items(), 1, None)
+            if param.default is not param.empty
         }
-        given_kwargs = {
+        passed_kwargs = {
             name: arg
             for name, arg in zip(islice(signature.parameters.keys(), 1, None), args)
         } | kwargs
@@ -408,11 +416,11 @@ def register_to_config(init):
         tracked_kwargs = {
             "_use_default_values": [
                 name
-                for name in set(default_kwargs.keys()) - set(given_kwargs.keys())
+                for name in set(default_kwargs.keys()) - set(passed_kwargs.keys())
                 if is_tracked(name)
             ]
         }
-        init_kwargs = default_kwargs | given_kwargs
+        init_kwargs = default_kwargs | passed_kwargs
         for name, value in init_kwargs.items():
             if is_tracked(name):
                 tracked_kwargs[name] = value
