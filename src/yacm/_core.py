@@ -3,6 +3,7 @@ import inspect
 import json
 import pathlib
 from collections import OrderedDict
+from copy import deepcopy
 from itertools import islice
 from os import PathLike
 from typing import Any, TypeVar
@@ -96,6 +97,9 @@ class ConfigMixin:
     >>> model.dropout
     0.1
     """
+
+    # These argument names should be ignored when initializing the class from a config
+    _meta_names = ["_class_name", "_use_default_values"]
 
     config_name = None
     ignore_for_config = []
@@ -200,119 +204,67 @@ class ConfigMixin:
 
     @classmethod
     def from_config(
-        cls: type[_Self],
-        save_directory: str | PathLike,
-        return_unused_kwargs: bool = False,
-        **kwargs,
-    ) -> _Self | tuple[_Self, dict[str, Any]]:
+        cls: type[_Self], save_directory: str | PathLike
+    ) -> tuple[_Self, dict[str, Any]]:
         r"""Instantiate the current class from a config dictionary.
 
         Parameters
         ----------
-        save_directory : str or PathLike, default=None
+        save_directory : str or PathLike
             Directory where the configuration JSON file, named as ``self.config_name``, is saved.
-        return_unused_kwargs : bool, default=False
-            Whether kwargs that are not consumed should be returned.
-        kwargs : dict[str, Any]
-            Can be used to update the configuration object and overwrite same named arguments.
 
         Returns
         -------
-        Instance of the class or tuple of (instance, unused_kwargs) if return_unused_kwargs=True.
+        A tuple of the instance of the class and a dictionary of the unused kwargs.
         """
         dest = pathlib.Path(save_directory)
         if dest.is_file():
             msg = f"Provided path ({save_directory}) should be a directory, not a file"
             raise AssertionError(msg)
 
-        with open(dest / cls.config_name, encoding="utf-8") as reader:
+        file = dest / cls.config_name
+        if not file.is_file():
+            msg = f"Provided path ({save_directory}) does not contain a file named {cls.config_name}"
+            raise FileNotFoundError(msg)
+
+        with open(file, encoding="utf-8") as reader:
             config = json.load(reader)
+            if config.get("_class_name") != cls.__name__:
+                msg = (
+                    f"Config file {cls.config_name} is not a config for {cls.__name__}"
+                )
+                raise ValueError(msg)
 
-        init_dict, unused_kwargs, hidden_dict = cls.extract_init_dict(config, **kwargs)
+        signature = inspect.signature(cls.__init__)
+        expected_names, default_names = set(), set()
+        for name, param in signature.parameters.items():
+            if param.kind is inspect.Parameter.VAR_POSITIONAL:
+                continue
+            if param.kind is inspect.Parameter.VAR_KEYWORD:
+                continue
+            if param.default is not param.empty:
+                default_names.add(name)
+                continue
+            expected_names.add(name)
 
-        # Create model instance
-        model = cls(**init_dict)
+        missing_names = expected_names - set(config.keys())
+        if missing_names:
+            msg = f"Config is missing required parameter(s): {', '.join(missing_names)}"
+            raise ValueError(msg)
 
-        # Register hidden config parameters
-        model.register_to_config(**hidden_dict)
-
-        # Add hidden kwargs to unused_kwargs
-        unused_kwargs = {**unused_kwargs, **hidden_dict}
-
-        if return_unused_kwargs:
-            return (model, unused_kwargs)
-        else:
-            return model
-
-    @staticmethod
-    def _get_init_keys(input_class):
-        """Get the parameter names from a class's __init__ method."""
-        return set(dict(inspect.signature(input_class.__init__).parameters).keys())
-
-    @classmethod
-    def extract_init_dict(cls, config_dict, **kwargs):
-        """
-        Extract initialization dictionary from config_dict and kwargs.
-
-        Returns:
-            Tuple of (init_dict, unused_kwargs, hidden_dict)
-        """
-        # Copy original config dict
-        original_dict = dict(config_dict.items())
-
-        # Get expected config attributes from __init__ signature
-        expected_keys = cls._get_init_keys(cls)
-        expected_keys.remove("self")
-
-        # Remove general kwargs if present in dict
-        if "kwargs" in expected_keys:
-            expected_keys.remove("kwargs")
-
-        # Remove keys to be ignored
-        if len(cls.ignore_for_config) > 0:
-            expected_keys = expected_keys - set(cls.ignore_for_config)
-
-        # Remove private attributes
-        config_dict = {k: v for k, v in config_dict.items() if not k.startswith("_")}
-
-        # Create keyword arguments that will be passed to __init__
-        init_dict = {}
-        for key in expected_keys:
-            # If config param is passed to kwarg and is present in config dict
-            # it should overwrite existing config dict key
-            if key in kwargs and key in config_dict:
-                config_dict[key] = kwargs.pop(key)
-
-            if key in kwargs:
-                # Overwrite key
-                init_dict[key] = kwargs.pop(key)
-            elif key in config_dict:
-                # Use value from config dict
-                init_dict[key] = config_dict.pop(key)
-
-        # Give nice warning if unexpected values have been passed
-        if len(config_dict) > 0:
-            print(
-                f"Warning: The config attributes {list(config_dict.keys())} were passed to {cls.__name__}, "
-                "but are not expected and will be ignored."
-            )
-
-        # Give nice info if config attributes are initialized to default values
-        passed_keys = set(init_dict.keys())
-        if len(expected_keys - passed_keys) > 0:
-            print(
-                f"Info: {expected_keys - passed_keys} was not found in config. Values will be initialized to default values."
-            )
-
-        # Define unused keyword arguments
-        unused_kwargs = {**config_dict, **kwargs}
-
-        # Define "hidden" config parameters
-        hidden_config_dict = {
-            k: v for k, v in original_dict.items() if k not in init_dict
+        unused_kwargs = {}
+        init_kwargs = {
+            name: signature.parameters[name].default for name in default_names
         }
+        for name, value in config.items():
+            if name in cls._meta_names:
+                continue
+            if name not in expected_names and name not in init_kwargs:
+                unused_kwargs[name] = value
+                continue
+            init_kwargs[name] = value
 
-        return init_dict, unused_kwargs, hidden_config_dict
+        return cls(**init_kwargs), unused_kwargs
 
     def get_config_json(self) -> str:
         r"""Serializes the configurations to a JSON string.
