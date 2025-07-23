@@ -3,7 +3,6 @@ import inspect
 import json
 import pathlib
 from collections import OrderedDict
-from copy import deepcopy
 from itertools import islice
 from os import PathLike
 from typing import Any, TypeVar
@@ -15,9 +14,10 @@ class FrozenDict(OrderedDict):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-        self.__frozen = True
         for key, value in self.items():
             setattr(self, key, value)
+
+        self.__frozen = True
 
     def __delitem__(self, *args, **kwargs):
         raise Exception(
@@ -40,14 +40,14 @@ class FrozenDict(OrderedDict):
         )
 
     def __setattr__(self, name, value):
-        if hasattr(self, "__frozen") and self.__frozen:
+        if hasattr(self, "_FrozenDict__frozen") and self.__frozen:
             raise Exception(
                 f"You cannot use `__setattr__` on a {self.__class__.__name__} instance."
             )
         super().__setattr__(name, value)
 
     def __setitem__(self, name, value):
-        if hasattr(self, "__frozen") and self.__frozen:
+        if hasattr(self, "_FrozenDict__frozen") and self.__frozen:
             raise Exception(
                 f"You cannot use `__setitem__` on a {self.__class__.__name__} instance."
             )
@@ -105,7 +105,7 @@ class ConfigMixin:
     ignore_for_config = []
 
     def __repr__(self) -> str:
-        return f"{self.__class__.__name__} {self.to_json_string()}"
+        return f"{self.__class__.__name__} {self.get_config_json()}"
 
     def __getattr__(self, name: str) -> Any:
         r"""Create a shortcut to access the config attributes."""
@@ -237,7 +237,7 @@ class ConfigMixin:
 
         signature = inspect.signature(cls.__init__)
         expected_names, default_names = set(), set()
-        for name, param in signature.parameters.items():
+        for name, param in islice(signature.parameters.items(), 1, None):
             if param.kind is inspect.Parameter.VAR_POSITIONAL:
                 continue
             if param.kind is inspect.Parameter.VAR_KEYWORD:
