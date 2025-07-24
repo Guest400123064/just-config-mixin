@@ -1,15 +1,15 @@
 # YACM - Yet Another Config Mixin
 
-A simple, standalone configuration management package inspired by the `ConfigMixin` class from the diffusers library. YACM provides an easy way to manage configuration objects with automatic serialization, CLI argument parsing, and more.
+A lightweight configuration management library for machine learning and experimentation. YACM provides a `ConfigMixin` class that can be mixed into your model classes, training pipelines, and experiment managers to automatically handle configuration serialization and management.
 
 ## Features
 
-- 🔧 **Easy Configuration Management**: Define configuration classes that automatically handle parameter registration
-- 💾 **Save/Load Functionality**: Serialize configurations to/from JSON files
-- 🖥️ **CLI Integration**: Automatically generate command-line arguments from configuration classes
-- 🔒 **Immutable Configs**: FrozenDict ensures configuration immutability after creation
-- 🎯 **Type-Aware**: Automatic type inference for CLI arguments based on type hints
-- 🔗 **Decorator Support**: `@register_to_config` decorator for automatic parameter registration
+- 🔗 **Mixin Pattern**: Add configuration management to any class (models, trainers, data loaders)
+- 💾 **Save/Load**: Automatic JSON serialization of configurations with type preservation
+- 🔒 **Immutable Configs**: FrozenDict ensures configuration consistency after creation
+- 🎯 **Type-Aware**: Handles complex types including paths, lists, and nested dictionaries
+- ⚡ **Decorator Support**: `@register_to_config` decorator for automatic parameter registration
+- 🧪 **ML-Focused**: Designed for model configurations, hyperparameters, and experiment tracking
 
 ## Installation
 
@@ -23,169 +23,162 @@ pip install yacm
 
 ## Quick Start
 
-### Basic Configuration Class
+### Model with Configuration
 
 ```python
+import torch.nn as nn
 from yacm import ConfigMixin, register_to_config
 
-class ModelConfig(ConfigMixin):
-    config_name = "model_config.json"
+class TransformerModel(nn.Module, ConfigMixin):
+    config_name = "transformer_config.json"
 
     @register_to_config
     def __init__(
         self,
+        vocab_size: int = 30000,
         hidden_size: int = 768,
         num_layers: int = 12,
-        learning_rate: float = 1e-4,
+        num_attention_heads: int = 12,
         dropout: float = 0.1,
-        use_bias: bool = True,
-        activation: str = "gelu"
+        max_length: int = 512
     ):
-        pass
+        super().__init__()
+        self.vocab_size = vocab_size
+        self.hidden_size = hidden_size
+        self.num_layers = num_layers
+        # ... model implementation
 
-# Create a configuration
-config = ModelConfig(hidden_size=512, learning_rate=2e-4)
-print(config.hidden_size)  # 512
-print(config.config)       # Access the full config as a FrozenDict
+        # Build your model layers here
+        self.embedding = nn.Embedding(vocab_size, hidden_size)
+        self.layers = nn.ModuleList([
+            TransformerLayer(hidden_size, num_attention_heads, dropout)
+            for _ in range(num_layers)
+        ])
+
+# Create and configure your model
+model = TransformerModel(hidden_size=1024, num_layers=24)
+print(model.hidden_size)  # 1024
+print(model.config)       # Access configuration as FrozenDict
 ```
 
-### Save and Load Configurations
+### Save and Load Model Configurations
 
 ```python
-# Save configuration
-config.save_config("./configs")
+# Save model configuration
+model.save_config("./model_checkpoints")
 
-# Load configuration
-config_dict = ModelConfig.load_config("./configs")
-new_config = ModelConfig.from_config(config_dict)
+# Load and recreate model with same configuration
+loaded_model, unused = TransformerModel.from_config("./model_checkpoints")
 
-# Or load directly from file
-config_dict = ModelConfig.load_config("./configs/model_config.json")
+# Configuration is preserved exactly
+assert loaded_model.hidden_size == model.hidden_size
+assert loaded_model.num_layers == model.num_layers
 ```
-
-### CLI Integration
-
-```python
-import argparse
-from yacm import add_argparse_arguments, parse_config_from_args
-
-# Method 1: Add to existing parser
-parser = argparse.ArgumentParser()
-add_argparse_arguments(parser, ModelConfig)
-args = parser.parse_args()
-config = config_from_args(ModelConfig, args)
-
-# Method 2: Convenience function
-config = parse_config_from_args(
-    ModelConfig,
-    args=["--hidden-size", "1024", "--learning-rate", "1e-3"]
-)
-```
-
-### Command Line Usage
-
-Your configuration classes automatically generate CLI arguments:
-
-```bash
-python your_script.py --hidden-size 1024 --num-layers 16 --learning-rate 1e-3 --no-use-bias
-```
-
-Boolean parameters create smart flags:
-- `use_bias: bool = True` → `--no-use-bias` flag to set to False
-- `use_bias: bool = False` → `--use-bias` flag to set to True
 
 ## Advanced Usage
 
-### Multiple Configuration Classes
+### Training Pipeline with Configuration
 
 ```python
-class ModelConfig(ConfigMixin):
-    config_name = "model_config.json"
-
-    @register_to_config
-    def __init__(self, hidden_size: int = 768, num_layers: int = 12):
-        pass
-
-class DataConfig(ConfigMixin):
-    config_name = "data_config.json"
-
-    @register_to_config
-    def __init__(self, batch_size: int = 32, sequence_length: int = 128):
-        pass
-
-# Use prefixes to avoid conflicts
-parser = argparse.ArgumentParser()
-add_argparse_arguments(parser, ModelConfig, prefix="model-")
-add_argparse_arguments(parser, DataConfig, prefix="data-")
-
-# CLI: --model-hidden-size 1024 --data-batch-size 64
-```
-
-### Ignoring Parameters
-
-```python
-class Config(ConfigMixin):
-    config_name = "config.json"
-    ignore_for_config = ["verbose", "debug"]  # Won't be saved to config
-
-    @register_to_config
-    def __init__(self, hidden_size: int = 768, verbose: bool = False):
-        self.verbose = verbose  # Not included in config
-```
-
-### Working with Complex Types
-
-```python
-from typing import List
-
-class Config(ConfigMixin):
-    config_name = "config.json"
+class ModelTrainer(ConfigMixin):
+    config_name = "trainer_config.json"
+    ignore_for_config = ["model", "optimizer"]  # Exclude runtime objects
 
     @register_to_config
     def __init__(
         self,
-        layers: List[int] = [512, 256, 128],
-        model_path: str = "/path/to/model"
+        learning_rate: float = 1e-4,
+        batch_size: int = 32,
+        num_epochs: int = 100,
+        weight_decay: float = 0.01,
+        lr_scheduler: str = "cosine",
+        model=None,
+        optimizer=None
     ):
-        pass
+        self.learning_rate = learning_rate
+        self.batch_size = batch_size
+        self.num_epochs = num_epochs
+        self.weight_decay = weight_decay
+        self.lr_scheduler = lr_scheduler
+        self.model = model
+        self.optimizer = optimizer
 
-# CLI usage: --layers 1024 512 256 --model-path /new/path
+# Create trainer with configuration
+trainer = ModelTrainer(learning_rate=2e-4, num_epochs=50)
+trainer.save_config("./experiment_1")
+```
+
+### Complete ML Workflow
+
+```python
+# Create all components with their configurations
+model = TransformerModel(hidden_size=1024, num_layers=24)
+trainer = ModelTrainer(learning_rate=1e-4, batch_size=64)
+
+# Save all configurations to the same experiment directory
+experiment_dir = "./experiments/run_001"
+model.save_config(experiment_dir)
+trainer.save_config(experiment_dir)
+
+# Later: reproduce the exact same setup
+loaded_model, _ = TransformerModel.from_config(experiment_dir)
+loaded_trainer, _ = ModelTrainer.from_config(experiment_dir)
+```
+
+### Ignoring Runtime Objects
+
+```python
+class ExperimentManager(ConfigMixin):
+    config_name = "experiment_config.json"
+    ignore_for_config = ["_results", "_logger"]  # Exclude runtime state
+
+    @register_to_config
+    def __init__(self, experiment_name: str, seed: int = 42, _logger=None):
+        self.experiment_name = experiment_name
+        self.seed = seed
+        self._logger = _logger  # Not saved to config
 ```
 
 ## API Reference
 
 ### ConfigMixin
 
-Base class for all configuration classes.
+Mixin class that adds configuration management to any class.
 
 **Class Attributes:**
-- `config_name`: Filename for saving configurations
-- `ignore_for_config`: List of parameters to exclude from config
+- `config_name`: Filename for saving configurations (required)
+- `ignore_for_config`: List of parameters to exclude from config (optional)
 
 **Methods:**
-- `register_to_config(**kwargs)`: Register parameters to config
-- `save_config(directory)`: Save config to JSON file
-- `load_config(path)`: Load config from file/directory
-- `from_config(config_dict)`: Create instance from config dictionary
+- `save_config(directory)`: Save configuration to JSON file
+- `from_config(directory)`: Load and create instance from saved configuration
+- `config`: Property to access configuration as FrozenDict
 
-### CLI Functions
-
-- `add_argparse_arguments(parser, config_class, prefix="", exclude=[])`: Add CLI arguments
-- `config_from_args(config_class, args, exclude=[])`: Create config from parsed args
-- `parse_config_from_args(config_class, args=None, ...)`: Convenience function
-
-### Decorators
-
+**Decorator:**
 - `@register_to_config`: Automatically register `__init__` parameters to config
 
-## Examples
+## Why Use YACM?
 
-Check out the `test_example.py` file for comprehensive examples showing:
-- Basic configuration usage
-- Save/load functionality
-- CLI argument parsing
-- Multiple configuration classes
-- Type handling
+YACM makes it easy to manage configurations in ML workflows:
+
+- **Reproducible Experiments**: Save exact model and training configurations
+- **Easy Hyperparameter Management**: Configuration built into your classes
+- **Type Safety**: Automatic handling of complex types (lists, paths, etc.)
+- **No Boilerplate**: Just inherit from ConfigMixin and use the decorator
+
+Perfect for model training, hyperparameter tuning, and experiment tracking.
+
+## CLI Support (Experimental)
+
+Basic CLI integration is available but experimental:
+
+```python
+from yacm import parse_config_from_args
+
+# Parse config from command line
+config = parse_config_from_args(TransformerModel,
+    ["--hidden-size", "1024", "--num-layers", "24"])
+```
 
 ## Contributing
 
