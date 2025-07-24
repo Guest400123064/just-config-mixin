@@ -29,6 +29,7 @@ pip install yacm
 import torch.nn as nn
 from yacm import ConfigMixin, register_to_config
 
+
 class TransformerModel(nn.Module, ConfigMixin):
     config_name = "transformer_config.json"
 
@@ -55,8 +56,9 @@ class TransformerModel(nn.Module, ConfigMixin):
             for _ in range(num_layers)
         ])
 
-# Create and configure your model
+
 model = TransformerModel(hidden_size=1024, num_layers=24)
+
 print(model.hidden_size)  # 1024
 print(model.config)       # Access configuration as FrozenDict
 ```
@@ -103,7 +105,7 @@ class ModelTrainer(ConfigMixin):
         self.model = model
         self.optimizer = optimizer
 
-# Create trainer with configuration
+
 trainer = ModelTrainer(learning_rate=2e-4, num_epochs=50)
 trainer.save_config("./experiment_1")
 ```
