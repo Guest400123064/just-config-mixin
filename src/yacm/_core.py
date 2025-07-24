@@ -20,37 +20,31 @@ class FrozenDict(OrderedDict):
         self.__frozen = True
 
     def __delitem__(self, *args, **kwargs):
-        raise Exception(
-            f"You cannot use `__delitem__` on a {self.__class__.__name__} instance."
-        )
+        msg = f"Cannot use `__delitem__` on a {self.__class__.__name__} instance."
+        raise Exception(msg)
 
     def setdefault(self, *args, **kwargs):
-        raise Exception(
-            f"You cannot use `setdefault` on a {self.__class__.__name__} instance."
-        )
+        msg = f"Cannot use `setdefault` on a {self.__class__.__name__} instance."
+        raise Exception(msg)
 
     def pop(self, *args, **kwargs):
-        raise Exception(
-            f"You cannot use `pop` on a {self.__class__.__name__} instance."
-        )
+        msg = f"Cannot use `pop` on a {self.__class__.__name__} instance."
+        raise Exception(msg)
 
     def update(self, *args, **kwargs):
-        raise Exception(
-            f"You cannot use `update` on a {self.__class__.__name__} instance."
-        )
+        msg = f"Cannot use `update` on a {self.__class__.__name__} instance."
+        raise Exception(msg)
 
     def __setattr__(self, name, value):
         if hasattr(self, "_FrozenDict__frozen") and self.__frozen:
-            raise Exception(
-                f"You cannot use `__setattr__` on a {self.__class__.__name__} instance."
-            )
+            msg = f"Cannot use `__setattr__` on a {self.__class__.__name__} instance."
+            raise Exception(msg)
         super().__setattr__(name, value)
 
     def __setitem__(self, name, value):
         if hasattr(self, "_FrozenDict__frozen") and self.__frozen:
-            raise Exception(
-                f"You cannot use `__setitem__` on a {self.__class__.__name__} instance."
-            )
+            msg = f"Cannot use `__setitem__` on a {self.__class__.__name__} instance."
+            raise Exception(msg)
         super().__setitem__(name, value)
 
 
