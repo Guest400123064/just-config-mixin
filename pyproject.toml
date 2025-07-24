@@ -21,6 +21,9 @@ build-backend = "poetry.core.masonry.api"
 [tool.ruff.lint]
 ignore = ["F401"]
 
+[tool.coverage.run]
+omit = ["tests/*"]
+
 [tool.poetry.group.development.dependencies]
 pytest = "^8.4.1"
 pdoc = "^15.0.4"
