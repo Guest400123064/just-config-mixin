@@ -1,4 +1,4 @@
-# YACM - Yet Another Config Manager
+# YACM - Yet Another Config Mixin
 
 A simple, standalone configuration management package inspired by the `ConfigMixin` class from the diffusers library. YACM provides an easy way to manage configuration objects with automatic serialization, CLI argument parsing, and more.
 
@@ -30,7 +30,7 @@ from yacm import ConfigMixin, register_to_config
 
 class ModelConfig(ConfigMixin):
     config_name = "model_config.json"
-    
+
     @register_to_config
     def __init__(
         self,
@@ -77,7 +77,7 @@ config = config_from_args(ModelConfig, args)
 
 # Method 2: Convenience function
 config = parse_config_from_args(
-    ModelConfig, 
+    ModelConfig,
     args=["--hidden-size", "1024", "--learning-rate", "1e-3"]
 )
 ```
@@ -101,14 +101,14 @@ Boolean parameters create smart flags:
 ```python
 class ModelConfig(ConfigMixin):
     config_name = "model_config.json"
-    
+
     @register_to_config
     def __init__(self, hidden_size: int = 768, num_layers: int = 12):
         pass
 
 class DataConfig(ConfigMixin):
     config_name = "data_config.json"
-    
+
     @register_to_config
     def __init__(self, batch_size: int = 32, sequence_length: int = 128):
         pass
@@ -127,7 +127,7 @@ add_argparse_arguments(parser, DataConfig, prefix="data-")
 class Config(ConfigMixin):
     config_name = "config.json"
     ignore_for_config = ["verbose", "debug"]  # Won't be saved to config
-    
+
     @register_to_config
     def __init__(self, hidden_size: int = 768, verbose: bool = False):
         self.verbose = verbose  # Not included in config
@@ -140,7 +140,7 @@ from typing import List
 
 class Config(ConfigMixin):
     config_name = "config.json"
-    
+
     @register_to_config
     def __init__(
         self,

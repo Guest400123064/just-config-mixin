@@ -64,7 +64,7 @@ class TestFrozenDictImmutability:
         with pytest.raises(Exception) as exc_info:
             frozen["new_key"] = "new_value"
 
-        assert "You cannot use `__setitem__`" in str(exc_info.value)
+        assert "Cannot use `__setitem__`" in str(exc_info.value)
         assert "FrozenDict" in str(exc_info.value)
 
     def test_setattr_raises_exception(self):
@@ -74,7 +74,7 @@ class TestFrozenDictImmutability:
         with pytest.raises(Exception) as exc_info:
             frozen.new_attr = "new_value"
 
-        assert "You cannot use `__setattr__`" in str(exc_info.value)
+        assert "Cannot use `__setattr__`" in str(exc_info.value)
         assert "FrozenDict" in str(exc_info.value)
 
     def test_delitem_raises_exception(self):
@@ -84,7 +84,7 @@ class TestFrozenDictImmutability:
         with pytest.raises(Exception) as exc_info:
             del frozen["key"]
 
-        assert "You cannot use `__delitem__`" in str(exc_info.value)
+        assert "Cannot use `__delitem__`" in str(exc_info.value)
         assert "FrozenDict" in str(exc_info.value)
 
     def test_setdefault_raises_exception(self):
@@ -94,7 +94,7 @@ class TestFrozenDictImmutability:
         with pytest.raises(Exception) as exc_info:
             frozen.setdefault("new_key", "default_value")
 
-        assert "You cannot use `setdefault`" in str(exc_info.value)
+        assert "Cannot use `setdefault`" in str(exc_info.value)
         assert "FrozenDict" in str(exc_info.value)
 
     def test_pop_raises_exception(self):
@@ -104,7 +104,7 @@ class TestFrozenDictImmutability:
         with pytest.raises(Exception) as exc_info:
             frozen.pop("key")
 
-        assert "You cannot use `pop`" in str(exc_info.value)
+        assert "Cannot use `pop`" in str(exc_info.value)
         assert "FrozenDict" in str(exc_info.value)
 
     def test_update_raises_exception(self):
@@ -114,7 +114,7 @@ class TestFrozenDictImmutability:
         with pytest.raises(Exception) as exc_info:
             frozen.update({"new_key": "new_value"})
 
-        assert "You cannot use `update`" in str(exc_info.value)
+        assert "Cannot use `update`" in str(exc_info.value)
         assert "FrozenDict" in str(exc_info.value)
 
 
