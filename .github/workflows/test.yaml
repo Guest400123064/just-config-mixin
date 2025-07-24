@@ -38,7 +38,7 @@ jobs:
         pip install --upgrade poetry
 
     - name: Install dependencies
-      run: poetry install --with dev
+      run: poetry install --with development
 
     - name: Run tests
       run: poetry run coverage run -m pytest tests
