@@ -159,6 +159,7 @@ Mixin class that adds configuration management to any class.
 **Methods:**
 - `save_config(directory)`: Save configuration to JSON file
 - `from_config(directory)`: Load and create instance from saved configuration
+- `add_cli_arguments(parser, prefix="", exclude=None)`: Add CLI arguments to ArgumentParser
 - `config`: Property to access configuration as FrozenDict
 
 **Decorator:**
@@ -175,16 +176,76 @@ YACM makes it easy to manage configurations in ML workflows:
 
 Perfect for model training, hyperparameter tuning, and experiment tracking.
 
-## CLI Support (Experimental)
+## CLI Integration
 
-Basic CLI integration is available but experimental:
+YACM provides built-in support for command-line argument parsing through the `add_cli_arguments` class method:
 
 ```python
-from yacm import parse_config_from_args
+import argparse
+from yacm import ConfigMixin, register_to_config
 
-# Parse config from command line
-config = parse_config_from_args(TransformerModel,
-    ["--hidden-size", "1024", "--num-layers", "24"])
+class TrainingConfig(ConfigMixin):
+    config_name = "training_config.json"
+
+    @register_to_config
+    def __init__(
+        self,
+        learning_rate: float = 1e-4,
+        batch_size: int = 32,
+        num_epochs: int = 100,
+        use_cuda: bool = True,
+        model_name: str = "transformer"
+    ):
+        self.learning_rate = learning_rate
+        self.batch_size = batch_size
+        self.num_epochs = num_epochs
+        self.use_cuda = use_cuda
+        self.model_name = model_name
+
+# Create argument parser and add config arguments
+parser = argparse.ArgumentParser(description="Training Script")
+TrainingConfig.add_cli_arguments(parser)
+
+# Parse command line arguments
+args = parser.parse_args()
+
+# Create config with parsed arguments
+config = TrainingConfig(
+    learning_rate=args.learning_rate,
+    batch_size=args.batch_size,
+    num_epochs=args.num_epochs,
+    use_cuda=args.use_cuda,
+    model_name=args.model_name
+)
+```
+
+### CLI Features
+
+- **Automatic Type Handling**: Types are inferred from annotations and defaults
+- **Boolean Flags**: `--flag` for False defaults, `--no-flag` for True defaults
+- **Prefix Support**: Add prefixes to avoid naming conflicts
+- **Selective Inclusion**: Exclude specific parameters from CLI
+- **List Support**: Handle list parameters with multiple values
+
+```bash
+# Example command line usage
+python train.py --learning-rate 0.001 --batch-size 64 --no-use-cuda --model-name "gpt"
+```
+
+### Advanced CLI Usage
+
+```python
+# With prefix to avoid conflicts
+TrainingConfig.add_cli_arguments(parser, prefix="train-")
+# Creates: --train-learning-rate, --train-batch-size, etc.
+
+# Exclude specific parameters
+TrainingConfig.add_cli_arguments(parser, exclude=["model_name"])
+# model_name won't have a CLI argument
+
+# Combine multiple configs
+ModelConfig.add_cli_arguments(parser, prefix="model-")
+TrainingConfig.add_cli_arguments(parser, prefix="train-")
 ```
 
 ## Contributing

@@ -7,6 +7,8 @@ from itertools import islice
 from os import PathLike
 from typing import Any, TypeVar
 
+from ._utils import add_arguments_to_parser
+
 _Self = TypeVar("_Self", bound="ConfigMixin")
 
 
@@ -72,24 +74,23 @@ class ConfigMixin:
     underscore; the ``dropout`` argument is explicitly based on the specification in ``ignore_for_config`` class
     variable. The ``hidden_size`` argument is registered to the config.
 
-    >>> class MyModel(nn.Module, ConfigMixin):
+    >>> class MyModel(ConfigMixin):
     ...     config_name = "my_model_config.json"
     ...     ignore_for_config = ["dropout"]
     ...
     ...     @register_to_config
     ...     def __init__(self, hidden_size: int = 768, _num_layers: int = 12, dropout: float = 0.1):
-    ...         super().__init__()
     ...         self.hidden_size = hidden_size
     ...         self.num_layers = _num_layers
     ...         self.dropout = dropout  # This will be ignored because of the specification in `ignore_for_config`
     ...
-    >>> model = MyModel(hidden_size=1024, num_layers=20, dropout=0.2)
+    >>> model = MyModel(hidden_size=1024, _num_layers=20, dropout=0.2)
     >>> model.config
     FrozenDict([('_use_default_values', []), ('hidden_size', 1024)])
     >>> model.num_layers
     20
     >>> model.dropout
-    0.1
+    0.2
     """
 
     # These argument names should be ignored when initializing the class from a config
@@ -292,6 +293,53 @@ class ConfigMixin:
             sort_keys=True,
         )
 
+    @classmethod
+    def add_cli_arguments(
+        cls,
+        parser,
+        prefix: str = "",
+        exclude: list[str] | None = None,
+    ):
+        r"""Add command-line arguments to an ArgumentParser based on this class.
+
+        This method inspects the ``__init__`` method of the class and creates corresponding
+        command-line arguments based on the parameter types and defaults. Boolean parameters
+        are handled specially with ``--flag`` and ``--no-flag`` options.
+
+        Parameters
+        ----------
+        parser : argparse.ArgumentParser
+            The ArgumentParser to add arguments to.
+        prefix : str, default=""
+            Optional prefix to add to argument names (e.g., "model-").
+        exclude : list[str], optional
+            List of parameter names to exclude from the arguments, in addition to those
+            specified in the class's ``ignore_for_config`` attribute.
+
+        Returns
+        -------
+        argparse.ArgumentParser
+            The ArgumentParser with added arguments.
+
+        Examples
+        --------
+        >>> import argparse
+        >>> class MyConfig(ConfigMixin):
+        ...     config_name = "my_config.json"
+        ...
+        ...     @register_to_config
+        ...     def __init__(self, learning_rate: float = 0.001, batch_size: int = 32, use_cuda: bool = True):
+        ...         self.learning_rate = learning_rate
+        ...         self.batch_size = batch_size
+        ...         self.use_cuda = use_cuda
+        ...
+        >>> parser = argparse.ArgumentParser()
+        >>> updated_parser = MyConfig.add_cli_arguments(parser)
+        >>> "--learning-rate" in updated_parser.format_help()
+        True
+        """
+        return add_arguments_to_parser(parser, cls, prefix=prefix, exclude=exclude)
+
 
 def register_to_config(init):
     r"""Decorator for the init of classes inheriting from `ConfigMixin` for auto argument-registration.
@@ -314,13 +362,12 @@ def register_to_config(init):
     underscore; the ``dropout`` argument is explicitly based on the specification in ``ignore_for_config`` class
     variable. The ``hidden_size`` argument is registered to the config.
 
-    >>> class MyModel(nn.Module, ConfigMixin):
+    >>> class MyModel(ConfigMixin):
     ...     config_name = "my_model_config.json"
     ...     ignore_for_config = ["dropout"]
     ...
     ...     @register_to_config
     ...     def __init__(self, hidden_size: int = 768, _num_layers: int = 12, dropout: float = 0.1):
-    ...         super().__init__()
     ...         self.hidden_size = hidden_size
     ...         self.num_layers = _num_layers
     ...         self.dropout = dropout  # This will be ignored because of the specification in `ignore_for_config`
