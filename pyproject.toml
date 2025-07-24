@@ -3,7 +3,7 @@ name = "yacm"
 version = "0.1.0"
 description = "Yet another config mixin/manager."
 authors = [
-    {name = "guest400123064",email = "lgfz1003@icloud.com"}
+    {name = "guest400123064", email = "wangy49@seas.upenn.edu"}
 ]
 license = {file = "LICENSE"}
 readme = "README.md"
