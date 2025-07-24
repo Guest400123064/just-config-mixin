@@ -23,18 +23,6 @@ class FrozenDict(OrderedDict):
         msg = f"Cannot use `__delitem__` on a {self.__class__.__name__} instance."
         raise Exception(msg)
 
-    def setdefault(self, *args, **kwargs):
-        msg = f"Cannot use `setdefault` on a {self.__class__.__name__} instance."
-        raise Exception(msg)
-
-    def pop(self, *args, **kwargs):
-        msg = f"Cannot use `pop` on a {self.__class__.__name__} instance."
-        raise Exception(msg)
-
-    def update(self, *args, **kwargs):
-        msg = f"Cannot use `update` on a {self.__class__.__name__} instance."
-        raise Exception(msg)
-
     def __setattr__(self, name, value):
         if hasattr(self, "_FrozenDict__frozen") and self.__frozen:
             msg = f"Cannot use `__setattr__` on a {self.__class__.__name__} instance."
@@ -46,6 +34,18 @@ class FrozenDict(OrderedDict):
             msg = f"Cannot use `__setitem__` on a {self.__class__.__name__} instance."
             raise Exception(msg)
         super().__setitem__(name, value)
+
+    def setdefault(self, *args, **kwargs):
+        msg = f"Cannot use `setdefault` on a {self.__class__.__name__} instance."
+        raise Exception(msg)
+
+    def pop(self, *args, **kwargs):
+        msg = f"Cannot use `pop` on a {self.__class__.__name__} instance."
+        raise Exception(msg)
+
+    def update(self, *args, **kwargs):
+        msg = f"Cannot use `update` on a {self.__class__.__name__} instance."
+        raise Exception(msg)
 
 
 class ConfigMixin:
