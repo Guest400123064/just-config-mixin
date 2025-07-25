@@ -18,6 +18,7 @@ from configmixin import ConfigMixin, register_to_config
 
 # Test Fixtures
 
+
 @pytest.fixture
 def temp_directory():
     r"""Provide a temporary directory for test files.
@@ -91,13 +92,16 @@ def mock_model():
 
 # Base Test Classes
 
+
 class BaseConfig(ConfigMixin):
     r"""Base configuration class for testing core functionality."""
 
     config_name = "base_config.json"
 
     @register_to_config
-    def __init__(self, param1: int = 10, param2: str = "default", param3: List[int] = None):
+    def __init__(
+        self, param1: int = 10, param2: str = "default", param3: List[int] = None
+    ):
         self.param1 = param1
         self.param2 = param2
         self.param3 = param3 or [1, 2, 3]
@@ -223,6 +227,7 @@ class ConfigWithComplexTypes(ConfigMixin):
 
 # Utility Classes for Multiple Inheritance Testing
 
+
 class BaseModel:
     r"""Abstract base model class for mixin testing."""
 
@@ -259,6 +264,7 @@ class SerializableMixin:
 
 
 # Test Utility Functions
+
 
 def assert_config_roundtrip(config_instance: ConfigMixin) -> None:
     r"""Assert that a config instance can be saved and loaded correctly.
@@ -309,10 +315,7 @@ def assert_config_json_valid(config_instance: ConfigMixin) -> None:
     assert config_dict["_class_name"] == config_instance.__class__.__name__
 
 
-def create_config_dict(
-    class_name: str,
-    **kwargs: Any
-) -> Dict[str, Any]:
+def create_config_dict(class_name: str, **kwargs: Any) -> Dict[str, Any]:
     r"""Create a properly formatted config dictionary for testing.
 
     Parameters
@@ -351,13 +354,12 @@ def parametrize_config_classes(*config_classes):
         Pytest parametrize decorator.
     """
     return pytest.mark.parametrize(
-        "config_class",
-        config_classes,
-        ids=[cls.__name__ for cls in config_classes]
+        "config_class", config_classes, ids=[cls.__name__ for cls in config_classes]
     )
 
 
 # Error Testing Utilities
+
 
 class ConfigWithoutName(ConfigMixin):
     r"""Configuration class without config_name for error testing."""
@@ -387,10 +389,7 @@ class MockSerializableObject:
         return {"mock_value": self.value, "type": "MockSerializableObject"}
 
     def __eq__(self, other) -> bool:
-        return (
-            isinstance(other, MockSerializableObject)
-            and self.value == other.value
-        )
+        return isinstance(other, MockSerializableObject) and self.value == other.value
 
 
 class MockNonSerializableObject:
@@ -402,6 +401,5 @@ class MockNonSerializableObject:
 
     def __eq__(self, other) -> bool:
         return (
-            isinstance(other, MockNonSerializableObject)
-            and self.value == other.value
+            isinstance(other, MockNonSerializableObject) and self.value == other.value
         )

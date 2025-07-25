@@ -12,20 +12,14 @@ This module tests the new var args functionality including:
 
 import json
 import pathlib
-from typing import Any, Dict, List
 
-import pytest
-
-from configmixin import ConfigMixin, FrozenDict, register_to_config
+from configmixin import ConfigMixin, register_to_config
 
 from .conftest import (
     ConfigWithBothVarArgs,
     ConfigWithVarArgs,
     ConfigWithVarKwargs,
-    MockNonSerializableObject,
     MockSerializableObject,
-    assert_config_json_valid,
-    create_config_dict,
 )
 
 
@@ -51,7 +45,13 @@ class ConfigWithPrivateVarArgs(ConfigMixin):
     config_name = "private_var_args.json"
 
     @register_to_config
-    def __init__(self, public: int = 1, *_private_args, _private_kw: str = "private", **_private_kwargs):
+    def __init__(
+        self,
+        public: int = 1,
+        *_private_args,
+        _private_kw: str = "private",
+        **_private_kwargs,
+    ):
         self.public = public
         self._private_args = _private_args
         self._private_kw = _private_kw
@@ -212,10 +212,12 @@ class TestPrivateVarArgs:
     def test_private_var_args_ignored(self):
         r"""Test that private var args are completely ignored."""
         config = ConfigWithPrivateVarArgs(
-            5, "private_arg1", "private_arg2",
+            5,
+            "private_arg1",
+            "private_arg2",
             _private_kw="private_value",
             _private_kwarg1="private1",
-            public_kwarg="public"
+            public_kwarg="public",
         )
 
         # Only public param should be in config
@@ -300,9 +302,12 @@ class TestVarArgsJsonSerialization:
         path2 = pathlib.Path("/data/output")
 
         config = ConfigWithBothVarArgs(
-            100, path1, path2, named_param="pathlib_test",
+            100,
+            path1,
+            path2,
+            named_param="pathlib_test",
             output_path=pathlib.Path("/results"),
-            config_path=pathlib.Path("/config")
+            config_path=pathlib.Path("/config"),
         )
 
         # Paths should be serialized as POSIX strings
@@ -319,8 +324,7 @@ class TestVarArgsJsonSerialization:
         obj2 = MockSerializableObject("test2")
 
         config = ConfigWithBothVarArgs(
-            100, obj1, named_param="serializable",
-            obj_kwarg=obj2
+            100, obj1, named_param="serializable", obj_kwarg=obj2
         )
 
         json_str = config.get_config_json()
@@ -369,16 +373,19 @@ class TestVarArgsEdgeCases:
         complex_dict = {"path": pathlib.Path("/tmp"), "nested": {"deep": "value"}}
 
         config = ConfigWithBothVarArgs(
-            100, complex_list, complex_dict, named_param="complex",
+            100,
+            complex_list,
+            complex_dict,
+            named_param="complex",
             list_kwarg=[pathlib.Path("/data"), {"more": "data"}],
             none_kwarg=None,
-            bool_kwarg=True
+            bool_kwarg=True,
         )
 
         assert config.config["_var_positional"] == (complex_list, complex_dict)
         expected_kwargs = {
             "list_kwarg": [pathlib.Path("/data"), {"more": "data"}],
             "none_kwarg": None,
-            "bool_kwarg": True
+            "bool_kwarg": True,
         }
         assert config.config["_var_keyword"] == expected_kwargs

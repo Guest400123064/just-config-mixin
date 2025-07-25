@@ -11,9 +11,7 @@ This module tests the enhanced functionality including:
 """
 
 import json
-import pathlib
-import tempfile
-from typing import Any, Dict, List, Optional
+from typing import Any
 from unittest.mock import Mock
 
 import pytest
@@ -26,7 +24,6 @@ from .conftest import (
     ConfigWithRuntimeArgs,
     assert_config_roundtrip,
     create_config_dict,
-    mock_model,
 )
 
 
@@ -58,10 +55,7 @@ class TestFromConfigWithDict:
     def test_from_config_with_dict_basic(self):
         r"""Test basic loading from config dict."""
         config_dict = create_config_dict(
-            "BaseConfig",
-            param1=42,
-            param2="test_value",
-            param3=[4, 5, 6]
+            "BaseConfig", param1=42, param2="test_value", param3=[4, 5, 6]
         )
 
         instance = BaseConfig.from_config(config=config_dict)
@@ -73,10 +67,7 @@ class TestFromConfigWithDict:
     def test_from_config_with_dict_missing_optional(self):
         r"""Test loading from dict with missing optional parameters."""
         config_dict = create_config_dict(
-            "BaseConfig",
-            param1=100,
-            param2="partial",
-            _use_default_values=["param3"]
+            "BaseConfig", param1=100, param2="partial", _use_default_values=["param3"]
         )
 
         instance = BaseConfig.from_config(config=config_dict)
@@ -92,7 +83,7 @@ class TestFromConfigWithDict:
             param1=10,
             param2="default",
             param3=None,
-            _use_default_values=["param1", "param2", "param3"]
+            _use_default_values=["param1", "param2", "param3"],
         )
 
         instance = BaseConfig.from_config(config=config_dict)
@@ -128,17 +119,10 @@ class TestFromConfigWithRuntimeKwargs:
     def test_runtime_kwargs_basic(self, mock_model):
         r"""Test basic runtime kwargs functionality."""
         config_dict = create_config_dict(
-            "ConfigWithRuntimeArgs",
-            hidden_size=512,
-            num_layers=6,
-            learning_rate=0.01
+            "ConfigWithRuntimeArgs", hidden_size=512, num_layers=6, learning_rate=0.01
         )
 
-        runtime_kwargs = {
-            "model": mock_model,
-            "device": "cuda",
-            "optimizer": "Adam"
-        }
+        runtime_kwargs = {"model": mock_model, "device": "cuda", "optimizer": "Adam"}
 
         instance = ConfigWithRuntimeArgs.from_config(
             config=config_dict, runtime_kwargs=runtime_kwargs
@@ -159,7 +143,7 @@ class TestFromConfigWithRuntimeKwargs:
         config_dict = create_config_dict(
             "ConfigWithRuntimeArgs",
             learning_rate=0.005,
-            _use_default_values=["hidden_size", "num_layers"]
+            _use_default_values=["hidden_size", "num_layers"],
         )
 
         runtime_kwargs = {
@@ -180,10 +164,7 @@ class TestFromConfigWithRuntimeKwargs:
     def test_runtime_kwargs_empty(self):
         r"""Test from_config with empty runtime_kwargs."""
         config_dict = create_config_dict(
-            "ConfigWithRuntimeArgs",
-            hidden_size=256,
-            num_layers=8,
-            learning_rate=0.002
+            "ConfigWithRuntimeArgs", hidden_size=256, num_layers=8, learning_rate=0.002
         )
 
         instance = ConfigWithRuntimeArgs.from_config(
@@ -199,7 +180,7 @@ class TestFromConfigWithRuntimeKwargs:
         config_dict = create_config_dict(
             "ConfigWithRuntimeArgs",
             learning_rate=0.003,
-            _use_default_values=["hidden_size", "num_layers"]
+            _use_default_values=["hidden_size", "num_layers"],
         )
 
         instance = ConfigWithRuntimeArgs.from_config(
@@ -220,15 +201,11 @@ class TestFromConfigCombined:
             "ConfigWithRuntimeArgs",
             hidden_size=1024,
             num_layers=24,
-            learning_rate=0.0001
+            learning_rate=0.0001,
         )
 
         mock_model = Mock(name="combined_model")
-        runtime_kwargs = {
-            "model": mock_model,
-            "device": "tpu",
-            "optimizer": "RMSprop"
-        }
+        runtime_kwargs = {"model": mock_model, "device": "tpu", "optimizer": "RMSprop"}
 
         instance = ConfigWithRuntimeArgs.from_config(
             config=config_dict, runtime_kwargs=runtime_kwargs
@@ -247,10 +224,7 @@ class TestFromConfigCombined:
     def test_file_and_runtime_kwargs(self, temp_directory):
         r"""Test loading from file with runtime kwargs."""
         config_dict = create_config_dict(
-            "ConfigWithRuntimeArgs",
-            hidden_size=512,
-            num_layers=16,
-            learning_rate=0.001
+            "ConfigWithRuntimeArgs", hidden_size=512, num_layers=16, learning_rate=0.001
         )
 
         config_file = temp_directory / "config_runtime.json"
@@ -283,7 +257,7 @@ class TestFromConfigWithVarArgs:
             base_param=200,
             named_param="var_test",
             _var_positional=["arg1", "arg2", 42],
-            _var_keyword={"extra1": "value1", "extra2": [1, 2, 3]}
+            _var_keyword={"extra1": "value1", "extra2": [1, 2, 3]},
         )
 
         mock_runtime = Mock(name="var_runtime")
@@ -308,9 +282,7 @@ class TestFromConfigWithVarArgs:
         r"""Test from_config when var args metadata is missing (backward compatibility)."""
         # Config without var args metadata (old format)
         config_dict = create_config_dict(
-            "ConfigWithBothVarArgs",
-            base_param=50,
-            named_param="old_format"
+            "ConfigWithBothVarArgs", base_param=50, named_param="old_format"
         )
 
         # Remove var args metadata to simulate old config
@@ -332,7 +304,7 @@ class TestFromConfigWithVarArgs:
             base_param=75,
             named_param="none_test",
             _var_positional=[None, "not_none", None],
-            _var_keyword={"none_key": None, "value_key": "value"}
+            _var_keyword={"none_key": None, "value_key": "value"},
         )
 
         instance = ConfigWithBothVarArgs.from_config(config=config_dict)
@@ -350,7 +322,9 @@ class TestFromConfigErrorHandling:
         with pytest.raises(ValueError) as exc_info:
             BaseConfig.from_config()
 
-        assert "Either `save_directory` or `config` must be provided" in str(exc_info.value)
+        assert "Either `save_directory` or `config` must be provided" in str(
+            exc_info.value
+        )
 
     def test_wrong_class_name_in_config(self):
         r"""Test error when config has wrong class name."""
@@ -363,6 +337,7 @@ class TestFromConfigErrorHandling:
 
     def test_missing_required_param_in_config(self):
         r"""Test error when config is missing required parameters."""
+
         class RequiredParamConfig(ConfigMixin):
             config_name = "required.json"
 
@@ -371,10 +346,7 @@ class TestFromConfigErrorHandling:
                 self.required_param = required_param
                 self.optional_param = optional_param
 
-        config_dict = create_config_dict(
-            "RequiredParamConfig",
-            optional_param=20
-        )
+        config_dict = create_config_dict("RequiredParamConfig", optional_param=20)
 
         with pytest.raises(ValueError) as exc_info:
             RequiredParamConfig.from_config(config=config_dict)
@@ -388,7 +360,7 @@ class TestFromConfigErrorHandling:
             param1=42,
             param2="test",
             param3=[1, 2, 3],
-            unexpected_param="should_cause_error"
+            unexpected_param="should_cause_error",
         )
 
         with pytest.raises(ValueError) as exc_info:
@@ -403,14 +375,13 @@ class TestFromConfigErrorHandling:
             base_param=75,
             named_param="runtime_test",
             _var_positional=["arg1"],
-            _var_keyword={"config_kwarg": "from_config"}
+            _var_keyword={"config_kwarg": "from_config"},
         )
 
         runtime_kwargs = {"runtime_param": "runtime_value"}
 
         instance = ConfigWithVarArgsAndRuntime.from_config(
-            config=config_dict,
-            runtime_kwargs=runtime_kwargs
+            config=config_dict, runtime_kwargs=runtime_kwargs
         )
 
         # Config var_kwargs should be preserved
@@ -496,7 +467,7 @@ class TestRoundTripSerialization:
             num_layers=18,
             learning_rate=0.0003,
             model=Mock(name="preserved"),
-            device="preserved_device"
+            device="preserved_device",
         )
 
         # Test round trip
@@ -506,10 +477,12 @@ class TestRoundTripSerialization:
         r"""Test that enhanced features work with traditional save/load."""
         # Create config with var args
         original = ConfigWithBothVarArgs(
-            50, "compat1", "compat2",
+            50,
+            "compat1",
+            "compat2",
             named_param="compatibility",
             extra_kw1="compat_value1",
-            extra_kw2="compat_value2"
+            extra_kw2="compat_value2",
         )
 
         # Save traditionally
@@ -519,7 +492,7 @@ class TestRoundTripSerialization:
         config_dict = json.loads(original.get_config_json())
         loaded = ConfigWithBothVarArgs.from_config(
             config=config_dict,
-            runtime_kwargs={}  # Empty runtime kwargs
+            runtime_kwargs={},  # Empty runtime kwargs
         )
 
         # Should be identical
@@ -540,7 +513,7 @@ class TestEnhancedMetadataHandling:
             base_param=123,
             named_param="metadata_test",
             _var_positional=["meta1", "meta2"],
-            _var_keyword={"meta_kw": "meta_value"}
+            _var_keyword={"meta_kw": "meta_value"},
         )
 
         instance = ConfigWithBothVarArgs.from_config(config=config_dict)
@@ -555,12 +528,11 @@ class TestEnhancedMetadataHandling:
         config_dict = create_config_dict(
             "ConfigWithRuntimeArgs",
             learning_rate=0.007,
-            _use_default_values=["hidden_size", "num_layers"]
+            _use_default_values=["hidden_size", "num_layers"],
         )
 
         instance = ConfigWithRuntimeArgs.from_config(
-            config=config_dict,
-            runtime_kwargs={"device": "runtime_device"}
+            config=config_dict, runtime_kwargs={"device": "runtime_device"}
         )
 
         # Default tracking should be preserved
@@ -571,6 +543,6 @@ class TestEnhancedMetadataHandling:
 
         # Values should be correct
         assert instance.hidden_size == 768  # Default
-        assert instance.num_layers == 12   # Default
+        assert instance.num_layers == 12  # Default
         assert instance.learning_rate == 0.007  # From config
         assert instance.device == "runtime_device"  # From runtime

@@ -14,11 +14,10 @@ This module tests the fundamental features of ConfigMixin including:
 import json
 import pathlib
 import tempfile
-from typing import Any, Dict, List, Optional
 
 import pytest
 
-from configmixin import ConfigMixin, FrozenDict, register_to_config
+from configmixin import ConfigMixin, FrozenDict
 
 from .conftest import (
     BaseConfig,
@@ -141,7 +140,7 @@ class TestIgnoredParameters:
             tracked_param=100,
             ignored_param="should_not_appear",
             runtime_param="also_ignored",
-            another_tracked=2.5
+            another_tracked=2.5,
         )
 
         # Tracked params should be in config
@@ -173,9 +172,7 @@ class TestPrivateParameters:
     def test_private_params_excluded_from_config(self):
         r"""Test that private parameters are excluded from config."""
         config = ConfigWithPrivate(
-            public_param=200,
-            _private_param="secret",
-            normal_param=3.14
+            public_param=200, _private_param="secret", normal_param=3.14
         )
 
         # Public params should be in config
@@ -250,7 +247,7 @@ class TestJSONSerialization:
         config = ConfigWithComplexTypes(
             list_param=[1, 2, 3],
             dict_param={"nested": {"deep": "value"}},
-            optional_param="not_none"
+            optional_param="not_none",
         )
 
         json_str = config.get_config_json()
@@ -357,7 +354,7 @@ class TestConfigSaveAndLoad:
             config = config_class(
                 list_param=[5, 6, 7],
                 dict_param={"test": "roundtrip"},
-                optional_param="not_none"
+                optional_param="not_none",
             )
 
         assert_config_roundtrip(config)
@@ -369,10 +366,7 @@ class TestFromConfigEnhancements:
     def test_from_config_with_dict(self):
         r"""Test loading config from dictionary."""
         config_dict = create_config_dict(
-            "BaseConfig",
-            param1=444,
-            param2="dict_test",
-            param3=[4, 4, 4]
+            "BaseConfig", param1=444, param2="dict_test", param3=[4, 4, 4]
         )
 
         instance = BaseConfig.from_config(config=config_dict)
@@ -383,19 +377,16 @@ class TestFromConfigEnhancements:
     def test_from_config_with_runtime_kwargs(self):
         r"""Test loading config with runtime kwargs."""
         config_dict = create_config_dict(
-            "ConfigWithIgnored",
-            tracked_param=333,
-            another_tracked=1.23
+            "ConfigWithIgnored", tracked_param=333, another_tracked=1.23
         )
 
         runtime_kwargs = {
             "ignored_param": "runtime_value",
-            "runtime_param": "also_runtime"
+            "runtime_param": "also_runtime",
         }
 
         instance = ConfigWithIgnored.from_config(
-            config=config_dict,
-            runtime_kwargs=runtime_kwargs
+            config=config_dict, runtime_kwargs=runtime_kwargs
         )
 
         # Config params should come from dict
@@ -447,7 +438,9 @@ class TestErrorHandling:
         with pytest.raises(ValueError) as exc_info:
             BaseConfig.from_config()
 
-        assert "Either `save_directory` or `config` must be provided" in str(exc_info.value)
+        assert "Either `save_directory` or `config` must be provided" in str(
+            exc_info.value
+        )
 
     def test_from_config_wrong_class_name(self):
         r"""Test error when config has wrong class name."""

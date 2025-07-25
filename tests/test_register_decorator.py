@@ -7,11 +7,8 @@ with new API features. Core functionality is tested in test_core_functionality.p
 """
 
 import json
-from typing import Dict, List, Optional
 
-import pytest
-
-from configmixin import ConfigMixin, FrozenDict, register_to_config
+from configmixin import ConfigMixin, register_to_config
 
 from .conftest import (
     BaseConfig,
@@ -98,7 +95,12 @@ class TestNewAPICompatibility:
         instance = ConfigWithVarArgs(50, "test_arg", extra_param="test_extra")
 
         # All new metadata fields should be present
-        required_fields = ["_class_name", "_use_default_values", "_var_positional", "_var_keyword"]
+        required_fields = [
+            "_class_name",
+            "_use_default_values",
+            "_var_positional",
+            "_var_keyword",
+        ]
         for field in required_fields:
             assert field in instance.config, f"Missing required field: {field}"
 
@@ -114,7 +116,7 @@ class TestNewAPICompatibility:
             base_param=99,
             extra_param="from_dict",
             _var_positional=["dict_arg1", "dict_arg2"],
-            _var_keyword={}
+            _var_keyword={},
         )
 
         instance = ConfigWithVarArgs.from_config(config=config_dict)
@@ -136,10 +138,12 @@ class TestNewAPICompatibility:
     def test_decorator_json_serialization_with_var_args(self):
         r"""Test that decorator properly handles JSON serialization with var args."""
         instance = ConfigWithBothVarArgs(
-            999, "json_arg1", "json_arg2",
+            999,
+            "json_arg1",
+            "json_arg2",
             named_param="json_test",
             json_kw1="json_value1",
-            json_kw2=42
+            json_kw2=42,
         )
 
         json_str = instance.get_config_json()
@@ -147,7 +151,10 @@ class TestNewAPICompatibility:
 
         # Should properly serialize var args
         assert config_dict["_var_positional"] == ["json_arg1", "json_arg2"]
-        assert config_dict["_var_keyword"] == {"json_kw1": "json_value1", "json_kw2": 42}
+        assert config_dict["_var_keyword"] == {
+            "json_kw1": "json_value1",
+            "json_kw2": 42,
+        }
         assert config_dict["base_param"] == 999
         assert config_dict["named_param"] == "json_test"
 

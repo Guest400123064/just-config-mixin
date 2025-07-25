@@ -12,12 +12,9 @@ including:
 """
 
 import json
-import pathlib
 from abc import ABC, abstractmethod
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List
 from unittest.mock import Mock
-
-import pytest
 
 from configmixin import ConfigMixin, register_to_config
 
@@ -338,7 +335,7 @@ class TestMixinConfigSaveLoad:
             hidden_size=512,
             num_layers=8,
             num_heads=8,
-            vocab_size=50000
+            vocab_size=50000,
         )
 
         runtime_kwargs = {"optimizer": "SGD"}
@@ -365,7 +362,7 @@ class TestMixinConfigSaveLoad:
             batch_size=128,
             max_epochs=200,
             model=Mock(name="trainable_model"),
-            dataset=Mock(name="training_data")
+            dataset=Mock(name="training_data"),
         )
 
         # Test config round trip (without runtime components)
@@ -503,7 +500,6 @@ class TestMixinCompatibility:
 
     def test_mixin_with_dataclass_style(self):
         r"""Test ConfigMixin compatibility with dataclass-style patterns."""
-        from dataclasses import dataclass
 
         # While we can't use @dataclass with ConfigMixin directly,
         # we can test similar patterns
@@ -557,9 +553,7 @@ class TestMixinCompatibility:
 
     def test_mixin_serialization_with_inheritance(self):
         r"""Test that serialization works correctly with inheritance."""
-        model = SerializableConfigModel(
-            model_type="serialization_test", version="1.5"
-        )
+        model = SerializableConfigModel(model_type="serialization_test", version="1.5")
 
         # Test ConfigMixin serialization
         config_json = model.get_config_json()

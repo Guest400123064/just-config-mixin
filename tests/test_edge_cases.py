@@ -13,16 +13,14 @@ This module tests various edge cases, error conditions, and boundary scenarios:
 import json
 import pathlib
 import tempfile
-from typing import Any, Dict, List, Optional
-from unittest.mock import Mock
+from typing import Any
 
 import pytest
 
-from configmixin import ConfigMixin, FrozenDict, register_to_config
+from configmixin import ConfigMixin, register_to_config
 
 from .conftest import (
     BaseConfig,
-    ConfigWithBothVarArgs,
     ConfigWithoutName,
     MockNonSerializableObject,
     MockSerializableObject,
@@ -38,12 +36,14 @@ class EdgeCaseConfig(ConfigMixin):
     ignore_for_config = ["ignored_var_kwarg"]
 
     @register_to_config
-    def __init__(self,
-                 normal_param: int = 10,
-                 *args,
-                 keyword_only: str = "kw_only",
-                 ignored_var_kwarg: str = "ignored",
-                 **kwargs):
+    def __init__(
+        self,
+        normal_param: int = 10,
+        *args,
+        keyword_only: str = "kw_only",
+        ignored_var_kwarg: str = "ignored",
+        **kwargs,
+    ):
         self.normal_param = normal_param
         self.args = args
         self.keyword_only = keyword_only
@@ -165,7 +165,9 @@ class TestFromConfigErrorHandling:
         with pytest.raises(ValueError) as exc_info:
             BaseConfig.from_config()
 
-        assert "Either `save_directory` or `config` must be provided" in str(exc_info.value)
+        assert "Either `save_directory` or `config` must be provided" in str(
+            exc_info.value
+        )
 
     def test_wrong_class_name_in_config(self):
         r"""Test error when config has wrong class name."""
@@ -178,6 +180,7 @@ class TestFromConfigErrorHandling:
 
     def test_missing_required_param_in_config(self):
         r"""Test error when config is missing required parameters."""
+
         class RequiredParamConfig(ConfigMixin):
             config_name = "required.json"
 
@@ -186,10 +189,7 @@ class TestFromConfigErrorHandling:
                 self.required_param = required_param
                 self.optional_param = optional_param
 
-        config_dict = create_config_dict(
-            "RequiredParamConfig",
-            optional_param=20
-        )
+        config_dict = create_config_dict("RequiredParamConfig", optional_param=20)
 
         with pytest.raises(ValueError) as exc_info:
             RequiredParamConfig.from_config(config=config_dict)
@@ -203,7 +203,7 @@ class TestFromConfigErrorHandling:
             param1=42,
             param2="test",
             param3=[1, 2, 3],
-            unexpected_param="should_cause_error"
+            unexpected_param="should_cause_error",
         )
 
         with pytest.raises(ValueError) as exc_info:
@@ -217,7 +217,7 @@ class TestFromConfigErrorHandling:
             "ComplexTypeConfig",
             base="malformed",
             _var_positional="should_be_list",  # Wrong type
-            _var_keyword=["should", "be", "dict"]  # Wrong type
+            _var_keyword=["should", "be", "dict"],  # Wrong type
         )
 
         # Should handle gracefully or raise appropriate error
@@ -231,10 +231,12 @@ class TestVarArgsEdgeCases:
     def test_ignored_var_kwargs_not_tracked(self):
         r"""Test that ignored var kwargs are not tracked in _var_keyword."""
         config = EdgeCaseConfig(
-            20, "arg1", "arg2",
+            20,
+            "arg1",
+            "arg2",
             keyword_only="custom",
             ignored_var_kwarg="should_not_appear",
-            tracked_kwarg="should_appear"
+            tracked_kwarg="should_appear",
         )
 
         assert config.config["normal_param"] == 20
@@ -250,9 +252,7 @@ class TestVarArgsEdgeCases:
         r"""Test from_config when var args metadata is missing (backward compatibility)."""
         # Config without var args metadata (old format)
         config_dict = create_config_dict(
-            "EdgeCaseConfig",
-            normal_param=50,
-            keyword_only="old_format"
+            "EdgeCaseConfig", normal_param=50, keyword_only="old_format"
         )
 
         # Remove var args metadata to simulate old config
@@ -306,9 +306,7 @@ class TestFrozenDictErrorHandling:
     def test_frozen_dict_with_var_args_immutability(self):
         r"""Test that FrozenDict remains immutable with var args data."""
         config = EdgeCaseConfig(
-            30, "arg1", "arg2",
-            keyword_only="frozen_test",
-            extra_kwarg="extra_value"
+            30, "arg1", "arg2", keyword_only="frozen_test", extra_kwarg="extra_value"
         )
 
         # Should not be able to modify var args in config
@@ -328,9 +326,10 @@ class TestAttributeAccessEdgeCases:
     def test_attribute_shortcut_with_var_args(self):
         r"""Test that __getattr__ works correctly with var args."""
         config = EdgeCaseConfig(
-            50, "shortcut_arg",
+            50,
+            "shortcut_arg",
             keyword_only="shortcut_test",
-            shortcut_kwarg="shortcut_value"
+            shortcut_kwarg="shortcut_value",
         )
 
         # Should be able to access config values as attributes
@@ -341,10 +340,7 @@ class TestAttributeAccessEdgeCases:
 
     def test_attribute_shortcut_precedence(self):
         r"""Test that instance attributes take precedence over config shortcuts."""
-        config = EdgeCaseConfig(
-            60, "precedence_arg",
-            keyword_only="precedence_test"
-        )
+        config = EdgeCaseConfig(60, "precedence_arg", keyword_only="precedence_test")
 
         # Instance attribute should take precedence
         assert config.normal_param == 60  # Instance attribute
@@ -372,8 +368,7 @@ class TestJSONSerializationEdgeCases:
         path2 = pathlib.Path("/data/output")
 
         config = ComplexTypeConfig(
-            "pathlib_test", path1, path2,
-            output_path=pathlib.Path("/results")
+            "pathlib_test", path1, path2, output_path=pathlib.Path("/results")
         )
 
         # Paths should be serialized as POSIX strings
@@ -388,10 +383,7 @@ class TestJSONSerializationEdgeCases:
         obj1 = MockSerializableObject("test1")
         obj2 = MockSerializableObject("test2")
 
-        config = ComplexTypeConfig(
-            "serializable", obj1,
-            obj_kwarg=obj2
-        )
+        config = ComplexTypeConfig("serializable", obj1, obj_kwarg=obj2)
 
         json_str = config.get_config_json()
         config_dict = json.loads(json_str)
@@ -457,11 +449,9 @@ class TestComplexScenarios:
             ignore_for_config = ["runtime_param"]
 
             @register_to_config
-            def __init__(self,
-                         param: str = "default",
-                         *args,
-                         runtime_param: Any = None,
-                         **kwargs):
+            def __init__(
+                self, param: str = "default", *args, runtime_param: Any = None, **kwargs
+            ):
                 super().__init__()
                 self.param = param
                 self.args = args
@@ -469,10 +459,13 @@ class TestComplexScenarios:
                 self.kwargs = kwargs
 
         config = ComplexEdgeConfig(
-            "test", "arg1", None, "arg3",
+            "test",
+            "arg1",
+            None,
+            "arg3",
             runtime_param="should_be_ignored",
             kw1=None,
-            kw2={"nested": None}
+            kw2={"nested": None},
         )
 
         # Should handle all edge cases correctly
@@ -493,8 +486,8 @@ class TestComplexScenarios:
                 "none_value": None,
                 "empty_list": [],
                 "empty_dict": {},
-                "nested_none": {"inner": None}
-            }
+                "nested_none": {"inner": None},
+            },
         )
 
         instance = ComplexTypeConfig.from_config(config=config_dict)
@@ -505,7 +498,7 @@ class TestComplexScenarios:
             "none_value": None,
             "empty_list": [],
             "empty_dict": {},
-            "nested_none": {"inner": None}
+            "nested_none": {"inner": None},
         }
 
     def test_edge_cases_with_runtime_kwargs_and_var_args(self):
@@ -515,16 +508,13 @@ class TestComplexScenarios:
             normal_param=99,
             keyword_only="edge_runtime",
             _var_positional=["runtime_arg"],
-            _var_keyword={"config_kw": "config_value"}
+            _var_keyword={"config_kw": "config_value"},
         )
 
-        runtime_kwargs = {
-            "ignored_var_kwarg": "runtime_ignored"
-        }
+        runtime_kwargs = {"ignored_var_kwarg": "runtime_ignored"}
 
         instance = EdgeCaseConfig.from_config(
-            config=config_dict,
-            runtime_kwargs=runtime_kwargs
+            config=config_dict, runtime_kwargs=runtime_kwargs
         )
 
         # Everything should work correctly
@@ -579,15 +569,7 @@ class TestBoundaryConditions:
     def test_deeply_nested_config_structures(self):
         r"""Test with deeply nested configuration structures."""
         deep_structure = {
-            "level1": {
-                "level2": {
-                    "level3": {
-                        "level4": {
-                            "value": "deep"
-                        }
-                    }
-                }
-            }
+            "level1": {"level2": {"level3": {"level4": {"value": "deep"}}}}
         }
 
         config = ComplexTypeConfig("deep", deep_structure)
