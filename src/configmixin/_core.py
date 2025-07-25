@@ -1,8 +1,8 @@
-from atexit import register
 import functools
 import inspect
 import json
 import pathlib
+from atexit import register
 from collections import OrderedDict
 from os import PathLike
 from typing import Any, TypeVar
@@ -92,7 +92,12 @@ class ConfigMixin:
     """
 
     # These argument names should be ignored when initializing the class from a config.
-    _meta_names = ["_class_name", "_use_default_values", "_var_positional", "_var_keyword"]
+    _meta_names = [
+        "_class_name",
+        "_use_default_values",
+        "_var_positional",
+        "_var_keyword",
+    ]
 
     config_name = None
     ignore_for_config = []
@@ -360,7 +365,7 @@ def register_to_config(init):
         registered_kwargs = {
             "_class_name": self.__class__.__name__,
             "_use_default_values": [],
-            "_var_positional": args[_num_non_var_positional(signature):],
+            "_var_positional": args[_num_non_var_positional(signature) :],
             "_var_keyword": {
                 name: param
                 for name, param in kwargs.items()
@@ -387,8 +392,7 @@ def register_to_config(init):
         # arguments, which will be captured by the `kwargs` argument. In this cases, default
         # values will not be used.
         for name, param in filter(
-            lambda i: i[0] not in registered_kwargs,
-            signature.parameters.items()
+            lambda i: i[0] not in registered_kwargs, signature.parameters.items()
         ):
             if name in ignore_for_config or name.startswith("_"):
                 continue
