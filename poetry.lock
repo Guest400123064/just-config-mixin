@@ -350,6 +350,23 @@ files = [
 ]
 
 [[package]]
+name = "docstring-parser"
+version = "0.17.0"
+description = "Parse Python docstrings in reST, Google and Numpydoc format"
+optional = false
+python-versions = ">=3.8"
+groups = ["main"]
+files = [
+    {file = "docstring_parser-0.17.0-py3-none-any.whl", hash = "sha256:cf2569abd23dce8099b300f9b4fa8191e9582dda731fd533daf54c4551658708"},
+    {file = "docstring_parser-0.17.0.tar.gz", hash = "sha256:583de4a309722b3315439bb31d64ba3eebada841f2e2cee23b99df001434c912"},
+]
+
+[package.extras]
+dev = ["pre-commit (>=2.16.0)", "pydoctor (>=25.4.0)", "pytest"]
+docs = ["pydoctor (>=25.4.0)"]
+test = ["pytest"]
+
+[[package]]
 name = "exceptiongroup"
 version = "1.3.0"
 description = "Backport of PEP 654 (exception groups)"
@@ -484,6 +501,26 @@ files = [
 all = ["flake8 (>=7.1.1)", "mypy (>=1.11.2)", "pytest (>=8.3.2)", "ruff (>=0.6.2)"]
 
 [[package]]
+name = "importlib-resources"
+version = "6.5.2"
+description = "Read resources from Python packages"
+optional = false
+python-versions = ">=3.9"
+groups = ["main"]
+files = [
+    {file = "importlib_resources-6.5.2-py3-none-any.whl", hash = "sha256:789cfdc3ed28c78b67a06acb8126751ced69a3d5f79c095a98298cd8a760ccec"},
+    {file = "importlib_resources-6.5.2.tar.gz", hash = "sha256:185f87adef5bcc288449d98fb4fba07cea78bc036455dd44c5fc4a2fe78fed2c"},
+]
+
+[package.extras]
+check = ["pytest-checkdocs (>=2.4)", "pytest-ruff (>=0.2.1)"]
+cover = ["pytest-cov"]
+doc = ["furo", "jaraco.packaging (>=9.3)", "jaraco.tidelift (>=1.4)", "rst.linker (>=1.9)", "sphinx (>=3.5)", "sphinx-lint"]
+enabler = ["pytest-enabler (>=2.2)"]
+test = ["jaraco.test (>=5.4)", "pytest (>=6,!=8.1.*)", "zipp (>=3.17)"]
+type = ["pytest-mypy"]
+
+[[package]]
 name = "iniconfig"
 version = "2.1.0"
 description = "brain-dead simple config-ini parsing"
@@ -542,7 +579,9 @@ files = [
 ]
 
 [package.dependencies]
+docstring-parser = {version = ">=0.17", optional = true, markers = "extra == \"signatures\""}
 PyYAML = ">=3.13"
+typeshed-client = {version = ">=2.8.2", optional = true, markers = "python_version >= \"3.9\" and extra == \"signatures\""}
 
 [package.extras]
 all = ["jsonargparse[fsspec]", "jsonargparse[jsonnet]", "jsonargparse[jsonschema]", "jsonargparse[omegaconf]", "jsonargparse[reconplogger]", "jsonargparse[ruyaml]", "jsonargparse[signatures]", "jsonargparse[toml]", "jsonargparse[typing-extensions]", "jsonargparse[urls]"]
@@ -937,17 +976,33 @@ files = [
 ]
 
 [[package]]
+name = "typeshed-client"
+version = "2.8.2"
+description = "A library for accessing stubs in typeshed."
+optional = false
+python-versions = ">=3.9"
+groups = ["main"]
+files = [
+    {file = "typeshed_client-2.8.2-py3-none-any.whl", hash = "sha256:4cf886d976c777689cd31889f13abf5bfb7797c82519b07e5969e541380c75ee"},
+    {file = "typeshed_client-2.8.2.tar.gz", hash = "sha256:9d8e29fb74574d87bf9a719f77131dc40f2aeea20e97d25d4a3dc2cc30debd31"},
+]
+
+[package.dependencies]
+importlib_resources = ">=1.4.0"
+typing-extensions = ">=4.5.0"
+
+[[package]]
 name = "typing-extensions"
 version = "4.14.1"
 description = "Backported and Experimental Type Hints for Python 3.9+"
 optional = false
 python-versions = ">=3.9"
-groups = ["development"]
-markers = "python_version < \"3.11\""
+groups = ["main", "development"]
 files = [
     {file = "typing_extensions-4.14.1-py3-none-any.whl", hash = "sha256:d1e1e3b58374dc93031d6eda2420a48ea44a36c2b4766a4fdeb3710755731d76"},
     {file = "typing_extensions-4.14.1.tar.gz", hash = "sha256:38b39f4aeeab64884ce9f74c94263ef78f3c22467c8724005483154c26648d36"},
 ]
+markers = {development = "python_version < \"3.11\""}
 
 [[package]]
 name = "urllib3"
@@ -1003,4 +1058,4 @@ files = [
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.10"
-content-hash = "197419b083638b3bac9ab4221983b90959297934b18ce9e84cbfa695e74255c3"
+content-hash = "7a6496c1d814989ee2b8232bb7374572efad653371909e777dd36aa782729eab"

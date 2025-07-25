@@ -7,7 +7,7 @@ Test suite for FrozenDict functionality.
 import pytest
 from collections import OrderedDict
 
-from yacm import FrozenDict
+from configmixin import FrozenDict
 
 
 class TestFrozenDictInitialization:

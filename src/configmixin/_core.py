@@ -1,13 +1,11 @@
+from atexit import register
 import functools
 import inspect
 import json
 import pathlib
 from collections import OrderedDict
-from itertools import islice
 from os import PathLike
 from typing import Any, TypeVar
-
-from ._utils import add_arguments_to_parser
 
 _Self = TypeVar("_Self", bound="ConfigMixin")
 
@@ -93,8 +91,8 @@ class ConfigMixin:
     0.2
     """
 
-    # These argument names should be ignored when initializing the class from a config
-    _meta_names = ["_class_name", "_use_default_values"]
+    # These argument names should be ignored when initializing the class from a config.
+    _meta_names = ["_class_name", "_use_default_values", "_var_positional", "_var_keyword"]
 
     config_name = None
     ignore_for_config = []
@@ -199,40 +197,53 @@ class ConfigMixin:
 
     @classmethod
     def from_config(
-        cls: type[_Self], save_directory: str | PathLike
-    ) -> tuple[_Self, dict[str, Any]]:
+        cls: type[_Self],
+        save_directory: str | PathLike = None,
+        config: dict[str, Any] = None,
+        runtime_kwargs: dict[str, Any] = None,
+    ) -> _Self:
         r"""Instantiate the current class from a config dictionary.
 
         Parameters
         ----------
-        save_directory : str or PathLike
+        save_directory : str or PathLike, default=None
             Directory where the configuration JSON file, named as ``self.config_name``, is saved.
+        config : dict[str, Any], default=None
+            A dictionary of the config parameters. If provided, the config will be loaded from the dictionary
+            instead of the JSON file.
+        runtime_kwargs : dict[str, Any], default=None
+            A dictionary of the runtime kwargs. These are usually non-serializable parameters that need to be
+            determined/initialized at runtime, such as the model object of a trainer class.
 
         Returns
         -------
-        A tuple of the instance of the class and a dictionary of the unused kwargs.
+        An instance of the class.
         """
-        dest = pathlib.Path(save_directory)
-        if dest.is_file():
-            msg = f"Provided path ({save_directory}) should be a directory, not a file"
-            raise AssertionError(msg)
-
-        file = dest / cls.config_name
-        if not file.is_file():
-            msg = f"Provided path ({save_directory}) does not contain a file named {cls.config_name}"
-            raise FileNotFoundError(msg)
-
-        with open(file, encoding="utf-8") as reader:
-            config = json.load(reader)
-            if config.get("_class_name") != cls.__name__:
-                msg = (
-                    f"Config file {cls.config_name} is not a config for {cls.__name__}"
-                )
+        if config is None:
+            if save_directory is None:
+                msg = "Either `save_directory` or `config` must be provided"
                 raise ValueError(msg)
 
-        signature = inspect.signature(cls.__init__)
+            dest = pathlib.Path(save_directory)
+            if dest.is_file():
+                msg = f"Provided path ({save_directory}) should be a directory, not a file"
+                raise AssertionError(msg)
+
+            file = dest / cls.config_name
+            if not file.is_file():
+                msg = f"Provided path ({save_directory}) does not contain a file named {cls.config_name}"
+                raise FileNotFoundError(msg)
+
+            with open(file, encoding="utf-8") as reader:
+                config = json.load(reader)
+
+        if config.get("_class_name") != cls.__name__:
+            msg = f"Config {cls.config_name} is not a config for {cls.__name__}."
+            raise ValueError(msg)
+
+        signature = inspect.signature(cls)
         expected_names, default_names = set(), set()
-        for name, param in islice(signature.parameters.items(), 1, None):
+        for name, param in signature.parameters.items():
             if param.kind is inspect.Parameter.VAR_POSITIONAL:
                 continue
             if param.kind is inspect.Parameter.VAR_KEYWORD:
@@ -247,7 +258,8 @@ class ConfigMixin:
             msg = f"Config is missing required parameter(s): {', '.join(missing_names)}"
             raise ValueError(msg)
 
-        unused_kwargs = {}
+        # Initialize with default values. However, note that, if the config file is serialized from
+        # a ConfigMixin instance, theoretically, it should already contain all the default values.
         init_kwargs = {
             name: signature.parameters[name].default for name in default_names
         }
@@ -255,11 +267,11 @@ class ConfigMixin:
             if name in cls._meta_names:
                 continue
             if name not in expected_names and name not in init_kwargs:
-                unused_kwargs[name] = value
-                continue
+                msg = f"Config contains unexpected parameter: {name}."
+                raise ValueError(msg)
             init_kwargs[name] = value
 
-        return cls(**init_kwargs), unused_kwargs
+        return cls(**init_kwargs, **(runtime_kwargs or {}))
 
     def get_config_json(self) -> str:
         r"""Serializes the configurations to a JSON string.
@@ -276,7 +288,6 @@ class ConfigMixin:
         """
         config_dict = self._internal_dict if hasattr(self, "_internal_dict") else {}
         config_dict = dict(config_dict)
-        config_dict["_class_name"] = self.__class__.__name__
 
         def cast(value):
             if isinstance(value, pathlib.Path):
@@ -292,53 +303,6 @@ class ConfigMixin:
             indent=2,
             sort_keys=True,
         )
-
-    @classmethod
-    def add_cli_arguments(
-        cls,
-        parser,
-        prefix: str = "",
-        exclude: list[str] | None = None,
-    ):
-        r"""Add command-line arguments to an ArgumentParser based on this class.
-
-        This method inspects the ``__init__`` method of the class and creates corresponding
-        command-line arguments based on the parameter types and defaults. Boolean parameters
-        are handled specially with ``--flag`` and ``--no-flag`` options.
-
-        Parameters
-        ----------
-        parser : argparse.ArgumentParser
-            The ArgumentParser to add arguments to.
-        prefix : str, default=""
-            Optional prefix to add to argument names (e.g., "model-").
-        exclude : list[str], optional
-            List of parameter names to exclude from the arguments, in addition to those
-            specified in the class's ``ignore_for_config`` attribute.
-
-        Returns
-        -------
-        argparse.ArgumentParser
-            The ArgumentParser with added arguments.
-
-        Examples
-        --------
-        >>> import argparse
-        >>> class MyConfig(ConfigMixin):
-        ...     config_name = "my_config.json"
-        ...
-        ...     @register_to_config
-        ...     def __init__(self, learning_rate: float = 0.001, batch_size: int = 32, use_cuda: bool = True):
-        ...         self.learning_rate = learning_rate
-        ...         self.batch_size = batch_size
-        ...         self.use_cuda = use_cuda
-        ...
-        >>> parser = argparse.ArgumentParser()
-        >>> updated_parser = MyConfig.add_cli_arguments(parser)
-        >>> "--learning-rate" in updated_parser.format_help()
-        True
-        """
-        return add_arguments_to_parser(parser, cls, prefix=prefix, exclude=exclude)
 
 
 def register_to_config(init):
@@ -390,35 +354,58 @@ def register_to_config(init):
             )
             raise RuntimeError(msg)
 
-        ignore = set(getattr(self, "ignore_for_config", []))
+        signature = inspect.signature(self.__class__)
 
-        def is_tracked(name: str) -> bool:
-            return name not in ignore and not name.startswith("_")
-
-        signature = inspect.signature(init)
-        default_kwargs = {
-            name: param.default
-            for name, param in islice(signature.parameters.items(), 1, None)
-            if param.default is not param.empty
+        ignore_for_config = set(getattr(self, "ignore_for_config", []))
+        registered_kwargs = {
+            "_class_name": self.__class__.__name__,
+            "_use_default_values": [],
+            "_var_positional": args[_num_non_var_positional(signature):],
+            "_var_keyword": {
+                name: param
+                for name, param in kwargs.items()
+                if name not in signature.parameters
+            },
         }
-        passed_kwargs = {
-            name: arg
-            for name, arg in zip(islice(signature.parameters.keys(), 1, None), args)
-        } | kwargs
 
-        tracked_kwargs = {
-            "_use_default_values": [
-                name
-                for name in set(default_kwargs.keys()) - set(passed_kwargs.keys())
-                if is_tracked(name)
-            ]
-        }
-        init_kwargs = default_kwargs | passed_kwargs
-        for name, value in init_kwargs.items():
-            if is_tracked(name):
-                tracked_kwargs[name] = value
+        # Obtain the names corresponding to positional arguments.
+        #
+        # Note that, if the number of provided positional argument is greater than the number
+        # of non-var positional arguments, while no var positional argument is present in the
+        # init signature, the extra positional arguments could be incorrectly associated with
+        # the var keyword arguments. But the instantiation of the class will fail anyway.
+        for name, param in zip(signature.parameters.keys(), args):
+            if signature.parameters[name].kind is inspect.Parameter.VAR_POSITIONAL:
+                break
+            if name in ignore_for_config or name.startswith("_"):
+                continue
+            registered_kwargs[name] = param
 
-        getattr(self, "register_to_config")(**tracked_kwargs)
-        init(self, **init_kwargs)
+        # Fill in the default values for the remaining positional arguments.
+        #
+        # Note that positional arguments of the init method may also be passed in as keyword
+        # arguments, which will be captured by the `kwargs` argument. In this cases, default
+        # values will not be used.
+        for name, param in filter(
+            lambda i: i[0] not in registered_kwargs,
+            signature.parameters.items()
+        ):
+            if name in ignore_for_config or name.startswith("_"):
+                continue
+            if name in kwargs:
+                registered_kwargs[name] = kwargs[name]
+            else:
+                registered_kwargs[name] = param.default
+                registered_kwargs["_use_default_values"].append(name)
+
+        getattr(self, "register_to_config")(**registered_kwargs)
+        init(self, *args, **kwargs)
 
     return inner_init
+
+
+def _num_non_var_positional(signature: inspect.Signature) -> int:
+    return sum(
+        param.kind is not inspect.Parameter.VAR_POSITIONAL
+        for param in signature.parameters.values()
+    )

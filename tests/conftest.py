@@ -10,7 +10,7 @@ import tempfile
 import pytest
 from typing import Any, Dict, List
 
-from yacm import ConfigMixin, register_to_config
+from configmixin import ConfigMixin, register_to_config
 
 
 @pytest.fixture

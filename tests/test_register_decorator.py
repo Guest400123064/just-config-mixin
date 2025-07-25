@@ -7,7 +7,7 @@ Test suite for register_to_config decorator functionality.
 import pytest
 from typing import List, Dict, Optional
 
-from yacm import ConfigMixin, register_to_config, FrozenDict
+from configmixin import ConfigMixin, register_to_config, FrozenDict
 
 
 class SampleDecoratorBasic(ConfigMixin):
@@ -315,13 +315,12 @@ class TestDecoratorIntegration:
             original.save_config(temp_dir)
 
             # Load back
-            loaded, unused = SampleDecoratorBasic.from_config(temp_dir)
+            loaded = SampleDecoratorBasic.from_config(temp_dir)
 
             assert loaded.param1 == 333
             assert loaded.param2 == "integration_test"
             assert loaded.config["param1"] == 333
             assert loaded.config["param2"] == "integration_test"
-            assert unused == {}
 
     def test_decorator_with_attribute_access(self):
         """Test that decorator works with attribute access shortcuts."""
