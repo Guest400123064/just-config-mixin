@@ -4,8 +4,9 @@
 Test suite for FrozenDict functionality.
 """
 
-import pytest
 from collections import OrderedDict
+
+import pytest
 
 from configmixin import FrozenDict
 
@@ -179,7 +180,7 @@ class TestFrozenDictSpecialCases:
         data = {
             "config": {"param1": 1, "param2": 2},
             "items": [1, 2, 3],
-            "metadata": {"version": "1.0", "author": "test"}
+            "metadata": {"version": "1.0", "author": "test"},
         }
         frozen = FrozenDict(data)
 
@@ -203,7 +204,7 @@ class TestFrozenDictSpecialCases:
             "none": None,
             "list": [1, 2, 3],
             "dict": {"nested": "value"},
-            "path": pathlib.Path("/tmp/test")
+            "path": pathlib.Path("/tmp/test"),
         }
         frozen = FrozenDict(data)
 

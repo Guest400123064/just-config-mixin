@@ -2,7 +2,6 @@ import functools
 import inspect
 import json
 import pathlib
-from atexit import register
 from collections import OrderedDict
 from os import PathLike
 from typing import Any, TypeVar
@@ -398,7 +397,8 @@ def register_to_config(init):
                 continue
             if name in kwargs:
                 registered_kwargs[name] = kwargs[name]
-            else:
+                continue
+            if param.default is not inspect.Parameter.empty:
                 registered_kwargs[name] = param.default
                 registered_kwargs["_use_default_values"].append(name)
 
