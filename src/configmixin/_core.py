@@ -3,8 +3,9 @@ import inspect
 import json
 import pathlib
 from collections import OrderedDict
+from copy import deepcopy
 from os import PathLike
-from typing import Any, TypeVar
+from typing import Any, TypeVar, Union
 
 _Self = TypeVar("_Self", bound="ConfigMixin")
 
@@ -148,7 +149,7 @@ class ConfigMixin:
         Please refer to the documentation of ``register_to_config`` decorator for usage examples.
         """
         if self.config_name is None:
-            msg = f"Make sure that {self.__class__} has defined a class attribute `config_name`."
+            msg = f"Make sure that {self.__class__.__name__} has defined a class attribute `config_name`."
             raise NotImplementedError(msg)
 
         if hasattr(self, "_internal_dict"):
@@ -179,7 +180,7 @@ class ConfigMixin:
             Whether to overwrite the configuration file if it already exists.
         """
         if self.config_name is None:
-            msg = f"Make sure that {self.__class__} has defined a class attribute `config_name`."
+            msg = f"Make sure that {self.__class__.__name__} has defined a class attribute `config_name`."
             raise NotImplementedError(msg)
 
         dest = pathlib.Path(save_directory)
@@ -202,19 +203,21 @@ class ConfigMixin:
     @classmethod
     def from_config(
         cls: type[_Self],
-        save_directory: str | PathLike = None,
         config: dict[str, Any] = None,
+        *,
+        save_directory: str | PathLike = None,
         runtime_kwargs: dict[str, Any] = None,
     ) -> _Self:
         r"""Instantiate the current class from a config dictionary.
 
         Parameters
         ----------
-        save_directory : str or PathLike, default=None
-            Directory where the configuration JSON file, named as ``self.config_name``, is saved.
         config : dict[str, Any], default=None
             A dictionary of the config parameters. If provided, the config will be loaded from the dictionary
-            instead of the JSON file.
+            instead of the JSON file. If not provided, the config will be loaded from the JSON file.
+        save_directory : str or PathLike, default=None
+            Directory where the configuration JSON file, named as ``self.config_name``, is saved. Note that the
+            ``config`` argument takes precedence over the ``save_directory`` argument.
         runtime_kwargs : dict[str, Any], default=None
             A dictionary of the runtime kwargs. These are usually non-serializable parameters that need to be
             determined/initialized at runtime, such as the model object of a trainer class.
@@ -245,37 +248,27 @@ class ConfigMixin:
             msg = f"Config {cls.config_name} is not a config for {cls.__name__}."
             raise ValueError(msg)
 
+        pooled_kwargs = deepcopy(config) | (runtime_kwargs or {})
+        for name in cls._meta_names:
+            pooled_kwargs.pop(name, None)
+
         signature = inspect.signature(cls)
-        expected_names, default_names = set(), set()
+        args = []
         for name, param in signature.parameters.items():
-            if param.kind is inspect.Parameter.VAR_POSITIONAL:
+            if param.kind not in {
+                inspect.Parameter.POSITIONAL_ONLY,
+                inspect.Parameter.POSITIONAL_OR_KEYWORD,
+            }:
                 continue
-            if param.kind is inspect.Parameter.VAR_KEYWORD:
-                continue
-            if param.default is not param.empty:
-                default_names.add(name)
-                continue
-            expected_names.add(name)
+            if name not in pooled_kwargs:
+                msg = f"Config is missing required parameter: {name}."
+                raise KeyError(msg)
+            args.append(pooled_kwargs.pop(name))
 
-        missing_names = expected_names - set(config.keys())
-        if missing_names:
-            msg = f"Config is missing required parameter(s): {', '.join(missing_names)}"
-            raise ValueError(msg)
+        args.extend(config.get("_var_positional", []))
+        pooled_kwargs = pooled_kwargs | config.get("_var_keyword", {})
 
-        # Initialize with default values. However, note that, if the config file is serialized from
-        # a ConfigMixin instance, theoretically, it should already contain all the default values.
-        init_kwargs = {
-            name: signature.parameters[name].default for name in default_names
-        }
-        for name, value in config.items():
-            if name in cls._meta_names:
-                continue
-            if name not in expected_names and name not in init_kwargs:
-                msg = f"Config contains unexpected parameter: {name}."
-                raise ValueError(msg)
-            init_kwargs[name] = value
-
-        return cls(**init_kwargs, **(runtime_kwargs or {}))
+        return cls(*args, **pooled_kwargs)
 
     def get_config_json(self) -> str:
         r"""Serializes the configurations to a JSON string.
@@ -295,12 +288,19 @@ class ConfigMixin:
 
         def cast(value):
             if isinstance(value, pathlib.Path):
-                value = value.as_posix()
+                return value.as_posix()
             elif hasattr(value, "to_dict") and callable(value.to_dict):
-                value = value.to_dict()
-            elif isinstance(value, list):
-                value = [cast(v) for v in value]
+                return value.to_dict()
+            elif isinstance(value, Union[list, tuple]):
+                return [cast(v) for v in value]
             return value
+
+        config_dict["_var_positional"] = [
+            cast(v) for v in config_dict["_var_positional"]
+        ]
+        config_dict["_var_keyword"] = {
+            k: cast(v) for k, v in config_dict["_var_keyword"].items()
+        }
 
         return json.dumps(
             {k: cast(v) for k, v in config_dict.items()},
@@ -364,12 +364,18 @@ def register_to_config(init):
         registered_kwargs = {
             "_class_name": self.__class__.__name__,
             "_use_default_values": [],
-            "_var_positional": args[_num_non_var_positional(signature) :],
-            "_var_keyword": {
-                name: param
-                for name, param in kwargs.items()
-                if name not in signature.parameters
-            },
+            "_var_positional": tuple(args[_num_non_var_positional(signature) :]),
+            "_var_keyword": FrozenDict(
+                {
+                    name: param
+                    for name, param in kwargs.items()
+                    if not (
+                        name in signature.parameters
+                        or name in ignore_for_config
+                        or name.startswith("_")
+                    )
+                }
+            ),
         }
 
         # Obtain the names corresponding to positional arguments.
@@ -410,6 +416,10 @@ def register_to_config(init):
 
 def _num_non_var_positional(signature: inspect.Signature) -> int:
     return sum(
-        param.kind is not inspect.Parameter.VAR_POSITIONAL
+        param.kind
+        in {
+            inspect.Parameter.POSITIONAL_ONLY,
+            inspect.Parameter.POSITIONAL_OR_KEYWORD,
+        }
         for param in signature.parameters.values()
     )

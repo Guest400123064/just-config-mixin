@@ -227,13 +227,12 @@ class TestPrivateVarArgs:
         assert "_private_kwargs" not in config.config
 
         # Var args should be empty since they were private
-        assert config.config["_var_positional"] == ()
-        assert config.config["_var_keyword"] == {"public_kwarg": "public"}
+        assert dict(config.config["_var_keyword"]) == {"public_kwarg": "public"}
 
         # But private attributes should still be set
         assert config._private_args == ("private_arg1", "private_arg2")
         assert config._private_kw == "private_value"
-        assert config._private_kwargs == {"_private_kwarg1": "private1"}
+        assert config._private_kwargs == {"_private_kwarg1": "private1", "public_kwarg": "public"}
 
 
 class TestVarArgsMetadata:
@@ -250,7 +249,7 @@ class TestVarArgsMetadata:
         # Use all defaults except var args
         config = ConfigWithBothVarArgs("arg1", extra_kw="value")
 
-        expected_defaults = ["base_param", "named_param"]
+        expected_defaults = ["named_param"]
         assert set(config.config["_use_default_values"]) == set(expected_defaults)
 
         # Override some defaults

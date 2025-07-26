@@ -183,12 +183,12 @@ class TestDecoratorBehaviorSpecifics:
         # Use some defaults
         instance = ConfigWithBothVarArgs("var_arg", named_param="custom")
 
-        # base_param should be marked as using default
-        assert "base_param" in instance.config["_use_default_values"]
+        # base_param should NOT be marked as using default (it was explicitly provided as "var_arg")
+        assert "base_param" not in instance.config["_use_default_values"]
         assert "named_param" not in instance.config["_use_default_values"]
 
-        # Var args should be captured
-        assert instance.config["_var_positional"] == ("var_arg",)
+        # Var args should be empty (no extra positional args provided after filling base_param)
+        assert instance.config["_var_positional"] == ()
 
     def test_decorator_signature_inspection_with_var_args(self):
         r"""Test that decorator correctly inspects signatures with var args."""

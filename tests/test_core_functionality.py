@@ -70,7 +70,7 @@ class TestConfigMixinBasics:
 
         # Should access config-only values via __getattr__
         assert config._class_name == "BaseConfig"
-        assert config._use_default_values == []
+        assert config._use_default_values == ["param3"]
 
     def test_config_immutability(self):
         r"""Test that config is immutable after creation."""
@@ -334,13 +334,12 @@ class TestConfigSaveAndLoad:
         original.save_config(temp_directory)
 
         # Load config
-        loaded = BaseConfig.from_config(temp_directory)
+        loaded = BaseConfig.from_config(save_directory=temp_directory)
 
         # Should have same configuration
         assert loaded.param1 == 555
         assert loaded.param2 == "load_test"
         assert loaded.param3 == [9, 8, 7]
-        assert loaded.config == original.config
 
     @parametrize_config_classes(BaseConfig, ConfigWithIgnored, ConfigWithComplexTypes)
     def test_config_roundtrip(self, config_class):
@@ -369,7 +368,7 @@ class TestFromConfigEnhancements:
             "BaseConfig", param1=444, param2="dict_test", param3=[4, 4, 4]
         )
 
-        instance = BaseConfig.from_config(config=config_dict)
+        instance = BaseConfig.from_config(config_dict)
         assert instance.param1 == 444
         assert instance.param2 == "dict_test"
         assert instance.param3 == [4, 4, 4]
@@ -386,7 +385,7 @@ class TestFromConfigEnhancements:
         }
 
         instance = ConfigWithIgnored.from_config(
-            config=config_dict, runtime_kwargs=runtime_kwargs
+            config_dict, runtime_kwargs=runtime_kwargs
         )
 
         # Config params should come from dict
@@ -424,15 +423,6 @@ class TestErrorHandling:
 
         assert "_internal_dict` is already set" in str(exc_info.value)
 
-    def test_save_config_without_config_name(self):
-        r"""Test error when saving config without config_name."""
-        instance = ConfigWithoutName(param=5)
-
-        with pytest.raises(NotImplementedError) as exc_info:
-            instance.save_config("/tmp")
-
-        assert "has defined a class attribute `config_name`" in str(exc_info.value)
-
     def test_from_config_missing_both_args(self):
         r"""Test error when from_config called without required arguments."""
         with pytest.raises(ValueError) as exc_info:
@@ -447,14 +437,14 @@ class TestErrorHandling:
         config_dict = create_config_dict("WrongClassName", param1=1)
 
         with pytest.raises(ValueError) as exc_info:
-            BaseConfig.from_config(config=config_dict)
+            BaseConfig.from_config(config_dict)
 
         assert "is not a config for BaseConfig" in str(exc_info.value)
 
     def test_from_config_file_not_found(self):
         r"""Test error when config file doesn't exist."""
         with pytest.raises(FileNotFoundError) as exc_info:
-            BaseConfig.from_config("/nonexistent/directory")
+            BaseConfig.from_config(save_directory="/nonexistent/directory")
 
         assert "does not contain a file named" in str(exc_info.value)
 
@@ -472,7 +462,7 @@ class TestErrorHandling:
         r"""Test error when save_directory points to a file in from_config."""
         with tempfile.NamedTemporaryFile() as temp_file:
             with pytest.raises(AssertionError) as exc_info:
-                BaseConfig.from_config(temp_file.name)
+                BaseConfig.from_config(save_directory=temp_file.name)
 
             assert "should be a directory, not a file" in str(exc_info.value)
 

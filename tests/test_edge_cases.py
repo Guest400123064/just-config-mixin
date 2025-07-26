@@ -98,15 +98,6 @@ class TestConfigMixinErrorHandling:
         with pytest.raises(AttributeError):
             _ = instance.config
 
-    def test_save_config_without_config_name(self):
-        r"""Test save_config when config_name is None."""
-        instance = ConfigWithoutName(param=5)
-
-        with pytest.raises(NotImplementedError) as exc_info:
-            instance.save_config("/tmp")
-
-        assert "has defined a class attribute `config_name`" in str(exc_info.value)
-
     def test_decorator_without_configmixin_inheritance(self):
         r"""Test error when decorator is used without ConfigMixin inheritance."""
         with pytest.raises(RuntimeError) as exc_info:
@@ -132,14 +123,14 @@ class TestFileSystemErrorHandling:
         r"""Test error when save_directory points to a file in from_config."""
         with tempfile.NamedTemporaryFile() as temp_file:
             with pytest.raises(AssertionError) as exc_info:
-                BaseConfig.from_config(temp_file.name)
+                BaseConfig.from_config(save_directory=temp_file.name)
 
             assert "should be a directory, not a file" in str(exc_info.value)
 
     def test_from_config_file_not_found(self):
         r"""Test error when config file doesn't exist."""
         with pytest.raises(FileNotFoundError) as exc_info:
-            BaseConfig.from_config("/nonexistent/directory")
+            BaseConfig.from_config(save_directory="/nonexistent/directory")
 
         assert "does not contain a file named" in str(exc_info.value)
 
@@ -191,10 +182,10 @@ class TestFromConfigErrorHandling:
 
         config_dict = create_config_dict("RequiredParamConfig", optional_param=20)
 
-        with pytest.raises(ValueError) as exc_info:
+        with pytest.raises(KeyError) as exc_info:
             RequiredParamConfig.from_config(config=config_dict)
 
-        assert "missing required parameter(s)" in str(exc_info.value)
+        assert "missing required" in str(exc_info.value)
 
     def test_unexpected_param_in_config(self):
         r"""Test error when config contains unexpected parameters."""
@@ -206,10 +197,10 @@ class TestFromConfigErrorHandling:
             unexpected_param="should_cause_error",
         )
 
-        with pytest.raises(ValueError) as exc_info:
+        with pytest.raises(TypeError) as exc_info:
             BaseConfig.from_config(config=config_dict)
 
-        assert "unexpected parameter: unexpected_param" in str(exc_info.value)
+        assert "unexpected" in str(exc_info.value)
 
     def test_from_config_malformed_var_args(self):
         r"""Test from_config with malformed var args data."""

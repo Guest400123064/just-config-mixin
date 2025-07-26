@@ -269,6 +269,10 @@ class SerializableMixin:
 def assert_config_roundtrip(config_instance: ConfigMixin) -> None:
     r"""Assert that a config instance can be saved and loaded correctly.
 
+    This function only compares the actual parameter values, not metadata fields
+    like _use_default_values, since those can differ after serialization/deserialization.
+    For ignored parameters, they are passed through runtime_kwargs during loading.
+
     Parameters
     ----------
     config_instance : ConfigMixin
@@ -283,11 +287,37 @@ def assert_config_roundtrip(config_instance: ConfigMixin) -> None:
         # Save config
         config_instance.save_config(temp_dir)
 
-        # Load config
-        loaded_instance = config_instance.__class__.from_config(temp_dir)
+        # Prepare runtime_kwargs for ignored parameters
+        ignored_params = getattr(config_instance, "ignore_for_config", [])
+        runtime_kwargs = {}
+        for param_name in ignored_params:
+            if hasattr(config_instance, param_name):
+                runtime_kwargs[param_name] = getattr(config_instance, param_name)
 
-        # Compare configs
-        assert loaded_instance.config == config_instance.config
+        # Load config with runtime_kwargs for ignored parameters
+        if runtime_kwargs:
+            loaded_instance = config_instance.__class__.from_config(
+                save_directory=temp_dir, runtime_kwargs=runtime_kwargs
+            )
+        else:
+            loaded_instance = config_instance.__class__.from_config(save_directory=temp_dir)
+
+        # Compare configs, excluding metadata fields
+        meta_fields = {"_class_name", "_use_default_values", "_var_positional", "_var_keyword"}
+
+        original_params = {k: v for k, v in config_instance.config.items() if k not in meta_fields}
+        loaded_params = {k: v for k, v in loaded_instance.config.items() if k not in meta_fields}
+
+        assert loaded_params == original_params
+
+        # Also verify that all instance attributes match (including ignored ones)
+        for param_name in original_params:
+            assert getattr(loaded_instance, param_name) == getattr(config_instance, param_name)
+
+        # Verify ignored parameters also match
+        for param_name in ignored_params:
+            if hasattr(config_instance, param_name):
+                assert getattr(loaded_instance, param_name) == getattr(config_instance, param_name)
 
 
 def assert_config_json_valid(config_instance: ConfigMixin) -> None:
