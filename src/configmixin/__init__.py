@@ -1,8 +1,5 @@
 """
-YACM - Yet Another Config Manager
-
-A simple, standalone configuration management package inspired by the ConfigMixin class
-from the diffusers library.
+.. include:: ../../README.md
 """
 
 from ._core import ConfigMixin, FrozenDict, register_to_config

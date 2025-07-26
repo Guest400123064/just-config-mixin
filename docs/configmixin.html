@@ -19,6 +19,21 @@
         <div>
 
 
+            <h2>Contents</h2>
+            <ul>
+  <li><a href="#configmixin">configmixin</a>
+  <ul>
+    <li><a href="#features">Features</a></li>
+    <li><a href="#installation">Installation</a></li>
+    <li><a href="#core-use-cases">Core Use Cases</a></li>
+    <li><a href="#complete-workflow">Complete Workflow</a></li>
+    <li><a href="#api-reference">API Reference</a></li>
+    <li><a href="#why-configmixin">Why configmixin?</a></li>
+    <li><a href="#contributing">Contributing</a></li>
+    <li><a href="#license">License</a></li>
+  </ul></li>
+</ul>
+
 
 
             <h2>API Documentation</h2>
@@ -84,10 +99,199 @@
                     <h1 class="modulename">
 configmixin    </h1>
 
-                        <div class="docstring"><p>YACM - Yet Another Config Manager</p>
+                        <div class="docstring"><p><a href="https://www.python.org/downloads/release/python-3100/"><img src="https://img.shields.io/badge/python-%203.10%20|%203.11%20|%203.12-blue.svg" alt="Python 3.10" /></a>
+<a href="https://opensource.org/licenses/Apache-2.0"><img src="https://img.shields.io/badge/License-Apache%202.0-blue.svg" alt="License: Apache 2.0" /></a>
+<a href="https://github.com/Guest400123064/configmixin/actions/workflows/test.yaml"><img src="https://github.com/Guest400123064/configmixin/actions/workflows/test.yaml/badge.svg" alt="test" /></a>
+<a href="https://codecov.io/gh/Guest400123064/configmixin"><img src="https://codecov.io/gh/Guest400123064/configmixin/graph/badge.svg?token=IGRIRBHZ3U" alt="codecov" /></a></p>
 
-<p>A simple, standalone configuration management package inspired by the ConfigMixin class
-from the diffusers library.</p>
+<h1 id="configmixin">configmixin</h1>
+
+<p>An ultra lightweight configuration management library for machine learning. Add automatic configuration handling to any class with a simple mixin pattern.</p>
+
+<h2 id="features">Features</h2>
+
+<ul>
+<li>🔗 <strong>Mixin Pattern</strong>: Add config management to models, trainers, or any class</li>
+<li>💾 <strong>Save/Load</strong>: Automatic JSON serialization with type preservation  </li>
+<li>⚡ <strong>Decorator Support</strong>: <code>@register_to_config</code> for automatic parameter registration</li>
+<li>🎯 <strong>Selective Exclusion</strong>: Control which parameters are saved to config</li>
+</ul>
+
+<h2 id="installation">Installation</h2>
+
+<div class="pdoc-code codehilite">
+<pre><span></span><code>pip<span class="w"> </span>install<span class="w"> </span>git+https://github.com/Guest400123064/configmixin.git
+</code></pre>
+</div>
+
+<h2 id="core-use-cases">Core Use Cases</h2>
+
+<h3 id="1-pytorch-model-with-configuration">1. PyTorch Model with Configuration</h3>
+
+<div class="pdoc-code codehilite">
+<pre><span></span><code><span class="kn">import</span><span class="w"> </span><span class="nn">torch.nn</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">nn</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">configmixin</span><span class="w"> </span><span class="kn">import</span> <span class="n">ConfigMixin</span><span class="p">,</span> <span class="n">register_to_config</span>
+
+<span class="k">class</span><span class="w"> </span><span class="nc">TransformerModel</span><span class="p">(</span><span class="n">nn</span><span class="o">.</span><span class="n">Module</span><span class="p">,</span> <span class="n">ConfigMixin</span><span class="p">):</span>
+    <span class="n">config_name</span> <span class="o">=</span> <span class="s2">&quot;model_config.json&quot;</span>
+
+    <span class="nd">@register_to_config</span>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">vocab_size</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">30000</span><span class="p">,</span>
+        <span class="n">hidden_size</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">768</span><span class="p">,</span>
+        <span class="n">num_layers</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">12</span><span class="p">,</span>
+        <span class="n">dropout</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.1</span>
+    <span class="p">):</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">vocab_size</span> <span class="o">=</span> <span class="n">vocab_size</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">hidden_size</span> <span class="o">=</span> <span class="n">hidden_size</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">num_layers</span> <span class="o">=</span> <span class="n">num_layers</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">dropout</span> <span class="o">=</span> <span class="n">dropout</span>
+
+        <span class="c1"># Build model layers</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">embedding</span> <span class="o">=</span> <span class="n">nn</span><span class="o">.</span><span class="n">Embedding</span><span class="p">(</span><span class="n">vocab_size</span><span class="p">,</span> <span class="n">hidden_size</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">layers</span> <span class="o">=</span> <span class="n">nn</span><span class="o">.</span><span class="n">ModuleList</span><span class="p">([</span>
+            <span class="n">nn</span><span class="o">.</span><span class="n">TransformerEncoderLayer</span><span class="p">(</span><span class="n">hidden_size</span><span class="p">,</span> <span class="mi">8</span><span class="p">,</span> <span class="n">batch_first</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+            <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">num_layers</span><span class="p">)</span>
+        <span class="p">])</span>
+
+<span class="c1"># Create model with custom config</span>
+<span class="n">model</span> <span class="o">=</span> <span class="n">TransformerModel</span><span class="p">(</span><span class="n">hidden_size</span><span class="o">=</span><span class="mi">1024</span><span class="p">,</span> <span class="n">num_layers</span><span class="o">=</span><span class="mi">24</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">model</span><span class="o">.</span><span class="n">config</span><span class="p">)</span>  <span class="c1"># FrozenDict with all parameters</span>
+</code></pre>
+</div>
+
+<h3 id="2-configuration-saveload">2. Configuration Save/Load</h3>
+
+<div class="pdoc-code codehilite">
+<pre><span></span><code><span class="c1"># Save configuration</span>
+<span class="n">model</span><span class="o">.</span><span class="n">save_config</span><span class="p">(</span><span class="s2">&quot;./checkpoints/experiment_1&quot;</span><span class="p">)</span>
+
+<span class="c1"># Load model with exact same configuration</span>
+<span class="n">loaded_model</span> <span class="o">=</span> <span class="n">TransformerModel</span><span class="o">.</span><span class="n">from_config</span><span class="p">(</span><span class="n">save_directory</span><span class="o">=</span><span class="s2">&quot;./checkpoints/experiment_1&quot;</span><span class="p">)</span>
+
+<span class="c1"># Or load from config dict</span>
+<span class="n">config_dict</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;vocab_size&quot;</span><span class="p">:</span> <span class="mi">50000</span><span class="p">,</span> <span class="s2">&quot;hidden_size&quot;</span><span class="p">:</span> <span class="mi">512</span><span class="p">,</span> <span class="s2">&quot;num_layers&quot;</span><span class="p">:</span> <span class="mi">6</span><span class="p">,</span> <span class="s2">&quot;dropout&quot;</span><span class="p">:</span> <span class="mf">0.2</span><span class="p">}</span>
+<span class="n">model_from_dict</span> <span class="o">=</span> <span class="n">TransformerModel</span><span class="o">.</span><span class="n">from_config</span><span class="p">(</span><span class="n">config</span><span class="o">=</span><span class="n">config_dict</span><span class="p">)</span>
+
+<span class="c1"># Access config as attributes</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">loaded_model</span><span class="o">.</span><span class="n">hidden_size</span><span class="p">)</span>  <span class="c1"># 1024</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">loaded_model</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">num_layers</span><span class="p">)</span>  <span class="c1"># 24</span>
+</code></pre>
+</div>
+
+<h3 id="3-training-pipeline-with-ignored-parameters">3. Training Pipeline with Ignored Parameters</h3>
+
+<div class="pdoc-code codehilite">
+<pre><span></span><code><span class="k">class</span><span class="w"> </span><span class="nc">ModelTrainer</span><span class="p">(</span><span class="n">ConfigMixin</span><span class="p">):</span>
+    <span class="n">config_name</span> <span class="o">=</span> <span class="s2">&quot;trainer_config.json&quot;</span>
+    <span class="n">ignore_for_config</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;model&quot;</span><span class="p">,</span> <span class="s2">&quot;optimizer&quot;</span><span class="p">]</span>  <span class="c1"># Exclude runtime objects</span>
+
+    <span class="nd">@register_to_config</span>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">learning_rate</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">1e-4</span><span class="p">,</span>
+        <span class="n">batch_size</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">32</span><span class="p">,</span>
+        <span class="n">num_epochs</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">100</span><span class="p">,</span>
+        <span class="n">weight_decay</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.01</span><span class="p">,</span>
+        <span class="c1"># Runtime objects (ignored)</span>
+        <span class="n">model</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">optimizer</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="c1"># Private params (auto-ignored due to underscore)</span>
+        <span class="n">_internal_state</span><span class="o">=</span><span class="kc">None</span>
+    <span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">learning_rate</span> <span class="o">=</span> <span class="n">learning_rate</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">batch_size</span> <span class="o">=</span> <span class="n">batch_size</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">num_epochs</span> <span class="o">=</span> <span class="n">num_epochs</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">weight_decay</span> <span class="o">=</span> <span class="n">weight_decay</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">model</span> <span class="o">=</span> <span class="n">model</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">optimizer</span> <span class="o">=</span> <span class="n">optimizer</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_internal_state</span> <span class="o">=</span> <span class="n">_internal_state</span>
+
+<span class="c1"># Only hyperparameters are saved, not runtime objects</span>
+<span class="n">trainer</span> <span class="o">=</span> <span class="n">ModelTrainer</span><span class="p">(</span>
+    <span class="n">learning_rate</span><span class="o">=</span><span class="mf">2e-4</span><span class="p">,</span>
+    <span class="n">batch_size</span><span class="o">=</span><span class="mi">64</span><span class="p">,</span>
+    <span class="n">model</span><span class="o">=</span><span class="n">some_model</span><span class="p">,</span>
+    <span class="n">optimizer</span><span class="o">=</span><span class="n">some_optimizer</span>
+<span class="p">)</span>
+
+<span class="n">trainer</span><span class="o">.</span><span class="n">save_config</span><span class="p">(</span><span class="s2">&quot;./experiments/run_001&quot;</span><span class="p">)</span>
+<span class="c1"># Config only contains: learning_rate, batch_size, num_epochs, weight_decay</span>
+</code></pre>
+</div>
+
+<h2 id="complete-workflow">Complete Workflow</h2>
+
+<div class="pdoc-code codehilite">
+<pre><span></span><code><span class="c1"># Create components with configurations</span>
+<span class="n">model</span> <span class="o">=</span> <span class="n">TransformerModel</span><span class="p">(</span><span class="n">hidden_size</span><span class="o">=</span><span class="mi">1024</span><span class="p">,</span> <span class="n">num_layers</span><span class="o">=</span><span class="mi">24</span><span class="p">)</span>
+<span class="n">trainer</span> <span class="o">=</span> <span class="n">ModelTrainer</span><span class="p">(</span><span class="n">learning_rate</span><span class="o">=</span><span class="mf">1e-4</span><span class="p">,</span> <span class="n">batch_size</span><span class="o">=</span><span class="mi">64</span><span class="p">)</span>
+
+<span class="c1"># Save all configurations to experiment directory</span>
+<span class="n">experiment_dir</span> <span class="o">=</span> <span class="s2">&quot;./experiments/run_001&quot;</span>
+<span class="n">model</span><span class="o">.</span><span class="n">save_config</span><span class="p">(</span><span class="n">experiment_dir</span><span class="p">)</span>
+<span class="n">trainer</span><span class="o">.</span><span class="n">save_config</span><span class="p">(</span><span class="n">experiment_dir</span><span class="p">)</span>
+
+<span class="c1"># Later: reproduce exact setup</span>
+<span class="n">loaded_model</span> <span class="o">=</span> <span class="n">TransformerModel</span><span class="o">.</span><span class="n">from_config</span><span class="p">(</span><span class="n">save_directory</span><span class="o">=</span><span class="n">experiment_dir</span><span class="p">)</span>
+<span class="n">loaded_trainer</span> <span class="o">=</span> <span class="n">ModelTrainer</span><span class="o">.</span><span class="n">from_config</span><span class="p">(</span><span class="n">save_directory</span><span class="o">=</span><span class="n">experiment_dir</span><span class="p">)</span>
+</code></pre>
+</div>
+
+<h2 id="api-reference">API Reference</h2>
+
+<h3 id="configmixin-2">ConfigMixin</h3>
+
+<p><strong>Class Attributes:</strong></p>
+
+<ul>
+<li><code>config_name</code>: Required filename for config JSON</li>
+<li><code>ignore_for_config</code>: List of parameters to exclude from config</li>
+</ul>
+
+<p><strong>Methods:</strong></p>
+
+<ul>
+<li><code>save_config(save_directory, overwrite=False)</code>: Save config to JSON</li>
+<li><code>from_config(config=None, save_directory=None, runtime_kwargs=None)</code>: Load instance from config</li>
+<li><code>config</code>: Property returning configuration as FrozenDict</li>
+<li><code>get_config_json()</code>: Get config as JSON string</li>
+</ul>
+
+<p><strong>Decorator:</strong></p>
+
+<ul>
+<li><code>@register_to_config</code>: Auto-register <code>__init__</code> parameters</li>
+</ul>
+
+<p><strong>Parameter Exclusion Rules:</strong></p>
+
+<ul>
+<li>Parameters in <code>ignore_for_config</code> are excluded</li>
+<li>Parameters starting with <code>_</code> are automatically excluded</li>
+<li>Runtime objects can be passed via <code>runtime_kwargs</code> in <code>from_config()</code></li>
+</ul>
+
+<h2 id="why-configmixin">Why configmixin?</h2>
+
+<p>Perfect for ML workflows where you need:</p>
+
+<ul>
+<li><strong>Reproducible experiments</strong> with exact parameter tracking</li>
+<li><strong>Easy hyperparameter management</strong> built into your classes  </li>
+<li><strong>Clean separation</strong> between config and runtime state</li>
+<li><strong>Type-safe serialization</strong> without boilerplate</li>
+</ul>
+
+<h2 id="contributing">Contributing</h2>
+
+<p>Contributions welcome! Please submit a Pull Request.</p>
+
+<h2 id="license">License</h2>
+
+<p>Apache License 2.0 - see LICENSE file for details.</p>
 </div>
 
                         <input id="mod-configmixin-view-source" class="view-source-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
@@ -95,21 +299,18 @@ from the diffusers library.</p>
                         <label class="view-source-button" for="mod-configmixin-view-source"><span>View Source</span></label>
 
                         <div class="pdoc-code codehilite"><pre><span></span><span id="L-1"><a href="#L-1"><span class="linenos"> 1</span></a><span class="sd">&quot;&quot;&quot;</span>
-</span><span id="L-2"><a href="#L-2"><span class="linenos"> 2</span></a><span class="sd">YACM - Yet Another Config Manager</span>
-</span><span id="L-3"><a href="#L-3"><span class="linenos"> 3</span></a>
-</span><span id="L-4"><a href="#L-4"><span class="linenos"> 4</span></a><span class="sd">A simple, standalone configuration management package inspired by the ConfigMixin class</span>
-</span><span id="L-5"><a href="#L-5"><span class="linenos"> 5</span></a><span class="sd">from the diffusers library.</span>
-</span><span id="L-6"><a href="#L-6"><span class="linenos"> 6</span></a><span class="sd">&quot;&quot;&quot;</span>
-</span><span id="L-7"><a href="#L-7"><span class="linenos"> 7</span></a>
-</span><span id="L-8"><a href="#L-8"><span class="linenos"> 8</span></a><span class="kn">from</span><span class="w"> </span><span class="nn">._core</span><span class="w"> </span><span class="kn">import</span> <span class="n">ConfigMixin</span><span class="p">,</span> <span class="n">FrozenDict</span><span class="p">,</span> <span class="n">register_to_config</span>
-</span><span id="L-9"><a href="#L-9"><span class="linenos"> 9</span></a>
-</span><span id="L-10"><a href="#L-10"><span class="linenos">10</span></a><span class="n">__version__</span> <span class="o">=</span> <span class="s2">&quot;0.1.0&quot;</span>
-</span><span id="L-11"><a href="#L-11"><span class="linenos">11</span></a>
-</span><span id="L-12"><a href="#L-12"><span class="linenos">12</span></a><span class="n">__all__</span> <span class="o">=</span> <span class="p">[</span>
-</span><span id="L-13"><a href="#L-13"><span class="linenos">13</span></a>    <span class="s2">&quot;ConfigMixin&quot;</span><span class="p">,</span>
-</span><span id="L-14"><a href="#L-14"><span class="linenos">14</span></a>    <span class="s2">&quot;FrozenDict&quot;</span><span class="p">,</span>
-</span><span id="L-15"><a href="#L-15"><span class="linenos">15</span></a>    <span class="s2">&quot;register_to_config&quot;</span><span class="p">,</span>
-</span><span id="L-16"><a href="#L-16"><span class="linenos">16</span></a><span class="p">]</span>
+</span><span id="L-2"><a href="#L-2"><span class="linenos"> 2</span></a><span class="sd">.. include:: ../../README.md</span>
+</span><span id="L-3"><a href="#L-3"><span class="linenos"> 3</span></a><span class="sd">&quot;&quot;&quot;</span>
+</span><span id="L-4"><a href="#L-4"><span class="linenos"> 4</span></a>
+</span><span id="L-5"><a href="#L-5"><span class="linenos"> 5</span></a><span class="kn">from</span><span class="w"> </span><span class="nn">._core</span><span class="w"> </span><span class="kn">import</span> <span class="n">ConfigMixin</span><span class="p">,</span> <span class="n">FrozenDict</span><span class="p">,</span> <span class="n">register_to_config</span>
+</span><span id="L-6"><a href="#L-6"><span class="linenos"> 6</span></a>
+</span><span id="L-7"><a href="#L-7"><span class="linenos"> 7</span></a><span class="n">__version__</span> <span class="o">=</span> <span class="s2">&quot;0.1.0&quot;</span>
+</span><span id="L-8"><a href="#L-8"><span class="linenos"> 8</span></a>
+</span><span id="L-9"><a href="#L-9"><span class="linenos"> 9</span></a><span class="n">__all__</span> <span class="o">=</span> <span class="p">[</span>
+</span><span id="L-10"><a href="#L-10"><span class="linenos">10</span></a>    <span class="s2">&quot;ConfigMixin&quot;</span><span class="p">,</span>
+</span><span id="L-11"><a href="#L-11"><span class="linenos">11</span></a>    <span class="s2">&quot;FrozenDict&quot;</span><span class="p">,</span>
+</span><span id="L-12"><a href="#L-12"><span class="linenos">12</span></a>    <span class="s2">&quot;register_to_config&quot;</span><span class="p">,</span>
+</span><span id="L-13"><a href="#L-13"><span class="linenos">13</span></a><span class="p">]</span>
 </span></pre></div>
 
 
