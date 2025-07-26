@@ -2,6 +2,7 @@
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 [![test](https://github.com/Guest400123064/configmixin/actions/workflows/test.yaml/badge.svg)](https://github.com/Guest400123064/configmixin/actions/workflows/test.yaml)
 [![codecov](https://codecov.io/gh/Guest400123064/configmixin/graph/badge.svg?token=IGRIRBHZ3U)](https://codecov.io/gh/Guest400123064/configmixin)
+[![PyPI](https://img.shields.io/pypi/v/just-config-mixin)](https://pypi.org/project/just-config-mixin/)
 
 # configmixin
 
@@ -15,6 +16,14 @@ An ultra lightweight configuration management library for machine learning inspi
 - 🎯 **Selective Exclusion**: Control which parameters are saved to config
 
 ## Installation
+
+From PyPI:
+
+```bash
+pip install just-config-mixin
+```
+
+If you are interested in the experimental (i.e., unstable and undertested) version, you can install it from GitHub:
 
 ```bash
 pip install git+https://github.com/Guest400123064/configmixin.git
