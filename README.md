@@ -1,9 +1,9 @@
-# YACM - Yet Another Config Mixin
-
 [![Python 3.10](https://img.shields.io/badge/python-%203.10%20|%203.11%20|%203.12-blue.svg)](https://www.python.org/downloads/release/python-3100/)
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
-[![test](https://github.com/Guest400123064/yacm/actions/workflows/test.yaml/badge.svg)](https://github.com/Guest400123064/yacm/actions/workflows/test.yaml)
-[![codecov](https://codecov.io/gh/Guest400123064/yacm/graph/badge.svg?token=IGRIRBHZ3U)](https://codecov.io/gh/Guest400123064/yacm)
+[![test](https://github.com/Guest400123064/configmixin/actions/workflows/test.yaml/badge.svg)](https://github.com/Guest400123064/configmixin/actions/workflows/test.yaml)
+[![codecov](https://codecov.io/gh/Guest400123064/configmixin/graph/badge.svg?token=IGRIRBHZ3U)](https://codecov.io/gh/Guest400123064/configmixin)
+
+# configmixin
 
 A lightweight configuration management library for machine learning and experimentation. YACM provides a `ConfigMixin` class that can be mixed into your model classes, training pipelines, and experiment managers to automatically handle configuration serialization and management.
 
@@ -11,8 +11,6 @@ A lightweight configuration management library for machine learning and experime
 
 - 🔗 **Mixin Pattern**: Add configuration management to any class (models, trainers, data loaders)
 - 💾 **Save/Load**: Automatic JSON serialization of configurations with type preservation
-- 🔒 **Immutable Configs**: FrozenDict ensures configuration consistency after creation
-- 🎯 **Type-Aware**: Handles complex types including paths, lists, and nested dictionaries
 - ⚡ **Decorator Support**: `@register_to_config` decorator for automatic parameter registration
 - 🧪 **ML-Focused**: Designed for model configurations, hyperparameters, and experiment tracking
 

@@ -12,7 +12,6 @@ packages = [
     {include = "configmixin", from = "src"}
 ]
 dependencies = [
-    "jsonargparse[signatures] (>=4.40.1,<5.0.0)"
 ]
 
 [build-system]
