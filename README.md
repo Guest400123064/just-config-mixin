@@ -5,7 +5,7 @@
 
 # configmixin
 
-An ultra lightweight configuration management library for machine learning. Add automatic configuration handling to any class with a simple mixin pattern. Please refer to the [documentation](https://guest400123064.github.io/configmixin/) for more details.
+An ultra lightweight configuration management library for machine learning inspired by the Hugging Face 🤗 [`diffusers`](https://github.com/huggingface/diffusers) library. Add automatic configuration handling to any class with a simple mixin pattern. Please refer to the [documentation](https://guest400123064.github.io/configmixin/) for more details.
 
 ## Features
 
