@@ -1,7 +1,7 @@
 [![Python 3.10](https://img.shields.io/badge/python-%203.10%20|%203.11%20|%203.12-blue.svg)](https://www.python.org/downloads/release/python-3100/)
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 [![test](https://github.com/Guest400123064/configmixin/actions/workflows/test.yaml/badge.svg)](https://github.com/Guest400123064/configmixin/actions/workflows/test.yaml)
-[![codecov](https://codecov.io/gh/Guest400123064/configmixin/graph/badge.svg?token=IGRIRBHZ3U)](https://codecov.io/gh/Guest400123064/configmixin)
+[![codecov](https://codecov.io/gh/Guest400123064/configmixin/branch/main/graph/badge.svg?token=6TG5R1AYQK)](https://codecov.io/gh/Guest400123064/configmixin)
 [![PyPI](https://img.shields.io/pypi/v/just-config-mixin)](https://pypi.org/project/just-config-mixin/)
 
 # configmixin
