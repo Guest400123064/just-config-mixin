@@ -106,13 +106,13 @@ configmixin    </h1>
 
 <h1 id="configmixin">configmixin</h1>
 
-<p>An ultra lightweight configuration management library for machine learning. Add automatic configuration handling to any class with a simple mixin pattern.</p>
+<p>An ultra lightweight configuration management library for machine learning. Add automatic configuration handling to any class with a simple mixin pattern. Please refer to the <a href="https://guest400123064.github.io/configmixin/">documentation</a> for more details.</p>
 
 <h2 id="features">Features</h2>
 
 <ul>
 <li>🔗 <strong>Mixin Pattern</strong>: Add config management to models, trainers, or any class</li>
-<li>💾 <strong>Save/Load</strong>: Automatic JSON serialization with type preservation  </li>
+<li>💾 <strong>Save/Load</strong>: Automatic JSON serialization with type preservation</li>
 <li>⚡ <strong>Decorator Support</strong>: <code>@register_to_config</code> for automatic parameter registration</li>
 <li>🎯 <strong>Selective Exclusion</strong>: Control which parameters are saved to config</li>
 </ul>
@@ -218,7 +218,10 @@ configmixin    </h1>
 <span class="p">)</span>
 
 <span class="n">trainer</span><span class="o">.</span><span class="n">save_config</span><span class="p">(</span><span class="s2">&quot;./experiments/run_001&quot;</span><span class="p">)</span>
+
 <span class="c1"># Config only contains: learning_rate, batch_size, num_epochs, weight_decay</span>
+<span class="c1"># and the runtime objects are passed via `runtime_kwargs` in `from_config()`</span>
+<span class="n">trainer</span> <span class="o">=</span> <span class="n">ModelTrainer</span><span class="o">.</span><span class="n">from_config</span><span class="p">(</span><span class="n">save_directory</span><span class="o">=</span><span class="s2">&quot;./experiments/run_001&quot;</span><span class="p">,</span> <span class="n">runtime_kwargs</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;model&quot;</span><span class="p">:</span> <span class="o">&lt;</span><span class="n">some_model</span><span class="o">&gt;</span><span class="p">})</span>
 </code></pre>
 </div>
 
@@ -236,7 +239,7 @@ configmixin    </h1>
 
 <span class="c1"># Later: reproduce exact setup</span>
 <span class="n">loaded_model</span> <span class="o">=</span> <span class="n">TransformerModel</span><span class="o">.</span><span class="n">from_config</span><span class="p">(</span><span class="n">save_directory</span><span class="o">=</span><span class="n">experiment_dir</span><span class="p">)</span>
-<span class="n">loaded_trainer</span> <span class="o">=</span> <span class="n">ModelTrainer</span><span class="o">.</span><span class="n">from_config</span><span class="p">(</span><span class="n">save_directory</span><span class="o">=</span><span class="n">experiment_dir</span><span class="p">)</span>
+<span class="n">loaded_trainer</span> <span class="o">=</span> <span class="n">ModelTrainer</span><span class="o">.</span><span class="n">from_config</span><span class="p">(</span><span class="n">save_directory</span><span class="o">=</span><span class="n">experiment_dir</span><span class="p">,</span> <span class="n">runtime_kwargs</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;model&quot;</span><span class="p">:</span> <span class="n">loaded_model</span><span class="p">})</span>
 </code></pre>
 </div>
 
@@ -280,9 +283,8 @@ configmixin    </h1>
 
 <ul>
 <li><strong>Reproducible experiments</strong> with exact parameter tracking</li>
-<li><strong>Easy hyperparameter management</strong> built into your classes  </li>
+<li><strong>Easy hyperparameter management</strong> built into your classes</li>
 <li><strong>Clean separation</strong> between config and runtime state</li>
-<li><strong>Type-safe serialization</strong> without boilerplate</li>
 </ul>
 
 <h2 id="contributing">Contributing</h2>

@@ -5,7 +5,7 @@
 
 # configmixin
 
-An ultra lightweight configuration management library for machine learning. Add automatic configuration handling to any class with a simple mixin pattern.
+An ultra lightweight configuration management library for machine learning. Add automatic configuration handling to any class with a simple mixin pattern. Please refer to the [documentation](https://guest400123064.github.io/configmixin/) for more details.
 
 ## Features
 
@@ -112,7 +112,10 @@ trainer = ModelTrainer(
 )
 
 trainer.save_config("./experiments/run_001")
+
 # Config only contains: learning_rate, batch_size, num_epochs, weight_decay
+# and the runtime objects are passed via `runtime_kwargs` in `from_config()`
+trainer = ModelTrainer.from_config(save_directory="./experiments/run_001", runtime_kwargs={"model": <some_model>})
 ```
 
 ## Complete Workflow
@@ -129,7 +132,7 @@ trainer.save_config(experiment_dir)
 
 # Later: reproduce exact setup
 loaded_model = TransformerModel.from_config(save_directory=experiment_dir)
-loaded_trainer = ModelTrainer.from_config(save_directory=experiment_dir)
+loaded_trainer = ModelTrainer.from_config(save_directory=experiment_dir, runtime_kwargs={"model": loaded_model})
 ```
 
 ## API Reference
@@ -160,7 +163,6 @@ Perfect for ML workflows where you need:
 - **Reproducible experiments** with exact parameter tracking
 - **Easy hyperparameter management** built into your classes
 - **Clean separation** between config and runtime state
-- **Type-safe serialization** without boilerplate
 
 ## Contributing
 
