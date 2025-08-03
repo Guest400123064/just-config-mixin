@@ -7,8 +7,6 @@ from os import PathLike
 from typing import Any, TypeVar, Union
 from types import MapProxyType
 
-import orjson
-
 _Self = TypeVar("_Self", bound="ConfigMixin")
 
 
@@ -256,14 +254,10 @@ class ConfigMixin:
             Note that ignored config parameters (specified via ``ignore_for_config``) are not included in
             the JSON string.
         """
-        return orjson.dumps(
+        return json.dumps(
             self._internal_dict,
-            options=(
-                orjson.OPT_INDENT_2
-                | orjson.OPT_SORT_KEYS
-                | orjson.OPT_APPEND_NEWLINE
-                | orjson.OPT_SERIALIZE_NUMPY
-            ),
+            sort_keys=True,
+            indent=2,
         )
 
 
