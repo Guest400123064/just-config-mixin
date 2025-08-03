@@ -98,11 +98,10 @@ class ConfigMixin:
 
         Returns
         -------
-        FrozenDict
-            The config of the class as a frozen dictionary. This is a shortcut to access the config
-            attributes of the class.
+        MapProxyType
+            The config of the class wrapped in ``MapProxyType``.
         """
-        return self._internal_dict
+        return MapProxyType(self._internal_dict)
 
     def register_to_config(self, **kwargs) -> None:
         r"""Register keyword arguments to the configuration.
@@ -132,7 +131,7 @@ class ConfigMixin:
             )
             raise RuntimeError(msg)
 
-        self._internal_dict = FrozenDict(kwargs)
+        self._internal_dict = deepcopy(kwargs)
 
     def save_config(
         self, save_directory: str | PathLike, overwrite: bool = False
@@ -254,31 +253,17 @@ class ConfigMixin:
         -------
         str
             String containing all the attributes that make up the configuration instance in JSON format.
-            Note that ignored config parameters and private attributes are not included in the JSON string.
+            Note that ignored config parameters (specified via ``ignore_for_config``) are not included in
+            the JSON string.
         """
-        config_dict = self._internal_dict if hasattr(self, "_internal_dict") else {}
-        config_dict = dict(config_dict)
-
-        def cast(value):
-            if isinstance(value, pathlib.Path):
-                return value.as_posix()
-            elif hasattr(value, "to_dict") and callable(value.to_dict):
-                return value.to_dict()
-            elif isinstance(value, Union[list, tuple]):
-                return [cast(v) for v in value]
-            return value
-
-        config_dict["_var_positional"] = [
-            cast(v) for v in config_dict["_var_positional"]
-        ]
-        config_dict["_var_keyword"] = {
-            k: cast(v) for k, v in config_dict["_var_keyword"].items()
-        }
-
-        return json.dumps(
-            {k: cast(v) for k, v in config_dict.items()},
-            indent=2,
-            sort_keys=True,
+        return orjson.dumps(
+            self._internal_dict,
+            options=(
+                orjson.OPT_INDENT_2
+                | orjson.OPT_SORT_KEYS
+                | orjson.OPT_APPEND_NEWLINE
+                | orjson.OPT_SERIALIZE_NUMPY
+            ),
         )
 
 
