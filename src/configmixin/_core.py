@@ -55,6 +55,7 @@ class ConfigMixin:
 
     _private_names = [
         "__metadata__",
+        "__jsonhook__",
     ]
     _internal_dict = {
         "__metadata__": {
@@ -62,7 +63,8 @@ class ConfigMixin:
             "using_default_values": [],
             "args": [],
             "kwargs": {},
-        }
+        },
+        "__jsonhook__": {},
     }
 
     config_name = None
