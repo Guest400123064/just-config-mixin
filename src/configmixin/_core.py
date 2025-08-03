@@ -2,50 +2,14 @@ import functools
 import inspect
 import json
 import pathlib
-from collections import OrderedDict
 from copy import deepcopy
 from os import PathLike
 from typing import Any, TypeVar, Union
+from types import MapProxyType
+
+import orjson
 
 _Self = TypeVar("_Self", bound="ConfigMixin")
-
-
-class FrozenDict(OrderedDict):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-
-        for key, value in self.items():
-            setattr(self, key, value)
-
-        self.__frozen = True
-
-    def __delitem__(self, *args, **kwargs):
-        msg = f"Cannot use `__delitem__` on a {self.__class__.__name__} instance."
-        raise Exception(msg)
-
-    def __setattr__(self, name, value):
-        if hasattr(self, "_FrozenDict__frozen") and self.__frozen:
-            msg = f"Cannot use `__setattr__` on a {self.__class__.__name__} instance."
-            raise Exception(msg)
-        super().__setattr__(name, value)
-
-    def __setitem__(self, name, value):
-        if hasattr(self, "_FrozenDict__frozen") and self.__frozen:
-            msg = f"Cannot use `__setitem__` on a {self.__class__.__name__} instance."
-            raise Exception(msg)
-        super().__setitem__(name, value)
-
-    def setdefault(self, *args, **kwargs):
-        msg = f"Cannot use `setdefault` on a {self.__class__.__name__} instance."
-        raise Exception(msg)
-
-    def pop(self, *args, **kwargs):
-        msg = f"Cannot use `pop` on a {self.__class__.__name__} instance."
-        raise Exception(msg)
-
-    def update(self, *args, **kwargs):
-        msg = f"Cannot use `update` on a {self.__class__.__name__} instance."
-        raise Exception(msg)
 
 
 class ConfigMixin:
@@ -91,13 +55,17 @@ class ConfigMixin:
     0.2
     """
 
-    # These argument names should be ignored when initializing the class from a config.
-    _meta_names = [
-        "_class_name",
-        "_use_default_values",
-        "_var_positional",
-        "_var_keyword",
+    _private_names = [
+        "__metadata__",
     ]
+    _internal_dict = {
+        "__metadata__": {
+            "class_name": None,
+            "using_default_values": [],
+            "args": [],
+            "kwargs": {},
+        }
+    }
 
     config_name = None
     ignore_for_config = []
@@ -120,8 +88,13 @@ class ConfigMixin:
         raise AttributeError(msg)
 
     @property
-    def config(self) -> FrozenDict:
-        r"""Returns the config of the class as a frozen dictionary.
+    def config(self) -> MapProxyType:
+        r"""Returns the config of the class as a ``MapProxyType``.
+
+        This is used to mitigate unintended modifications to the config dictionary. Note that this
+        method does not completely rule out the possibility of modifying the config. For instance,
+        if the user access a nested dictionary or list in the config, they can still modify the
+        contents after dereferencing the nested object.
 
         Returns
         -------
