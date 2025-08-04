@@ -2,12 +2,14 @@
 .. include:: ../../README.md
 """
 
-from ._core import ConfigMixin, FrozenDict, register_to_config
+from ._core import ConfigMixin, register_to_config
+from ._json import default, option
 
 __version__ = "0.1.1-alpha"
 
 __all__ = [
     "ConfigMixin",
-    "FrozenDict",
     "register_to_config",
+    "default",
+    "option",
 ]

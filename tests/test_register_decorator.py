@@ -146,7 +146,7 @@ class TestNewAPICompatibility:
             json_kw2=42,
         )
 
-        json_str = instance.get_config_json()
+        json_str = instance.config_dumps()
         config_dict = json.loads(json_str)
 
         # Should properly serialize var args

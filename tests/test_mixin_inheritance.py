@@ -155,7 +155,7 @@ class TestConfigMixinAsBaseMixin:
         assert model.config["_class_name"] == "LinearModel"
 
         # Should be able to serialize config
-        json_str = model.get_config_json()
+        json_str = model.config_dumps()
         config_dict = json.loads(json_str)
         assert config_dict["input_size"] == 256
 
@@ -534,7 +534,7 @@ class TestMixinCompatibility:
         model = SerializableConfigModel(model_type="serialization_test", version="1.5")
 
         # Test ConfigMixin serialization
-        config_json = model.get_config_json()
+        config_json = model.config_dumps()
         config_dict = json.loads(config_json)
         assert config_dict["model_type"] == "serialization_test"
 

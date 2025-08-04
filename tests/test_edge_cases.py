@@ -363,7 +363,7 @@ class TestJSONSerializationEdgeCases:
         )
 
         # Paths should be serialized as POSIX strings
-        json_str = config.get_config_json()
+        json_str = config.config_dumps()
         config_dict = json.loads(json_str)
 
         assert config_dict["_var_positional"] == ["/data/input", "/data/output"]
@@ -376,7 +376,7 @@ class TestJSONSerializationEdgeCases:
 
         config = ComplexTypeConfig("serializable", obj1, obj_kwarg=obj2)
 
-        json_str = config.get_config_json()
+        json_str = config.config_dumps()
         config_dict = json.loads(json_str)
 
         # Objects with to_dict should be serialized using that method
@@ -391,7 +391,7 @@ class TestJSONSerializationEdgeCases:
         nested_list = [[1, [2, [3, 4]]], [5, 6]]
         config = ComplexTypeConfig("nested", nested_list)
 
-        json_str = config.get_config_json()
+        json_str = config.config_dumps()
         config_dict = json.loads(json_str)
 
         assert config_dict["_var_positional"][0] == nested_list
@@ -399,7 +399,7 @@ class TestJSONSerializationEdgeCases:
     def test_json_serialization_with_empty_var_args(self):
         r"""Test JSON serialization when var args are empty."""
         config = ComplexTypeConfig(base="empty")
-        json_str = config.get_config_json()
+        json_str = config.config_dumps()
         config_dict = json.loads(json_str)
 
         assert config_dict["_var_positional"] == []
@@ -415,7 +415,7 @@ class TestJSONSerializationEdgeCases:
         # This might succeed (storing the object as-is) or fail gracefully
         # The behavior depends on the cast function implementation
         try:
-            json_str = config.get_config_json()
+            json_str = config.config_dumps()
             # If it succeeds, parsing should work
             config_dict = json.loads(json_str)
             assert "_var_positional" in config_dict
@@ -566,7 +566,7 @@ class TestBoundaryConditions:
         config = ComplexTypeConfig("deep", deep_structure)
 
         # Should preserve deep nesting
-        json_str = config.get_config_json()
+        json_str = config.config_dumps()
         config_dict = json.loads(json_str)
 
         assert config_dict["_var_positional"][0] == deep_structure

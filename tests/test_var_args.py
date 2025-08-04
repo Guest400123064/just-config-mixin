@@ -274,7 +274,7 @@ class TestVarArgsJsonSerialization:
             extra_dict={"key": "value"},
         )
 
-        json_str = config.get_config_json()
+        json_str = config.config_dumps()
         config_dict = json.loads(json_str)
 
         assert config_dict["_class_name"] == "ConfigWithBothVarArgs"
@@ -289,7 +289,7 @@ class TestVarArgsJsonSerialization:
     def test_empty_var_args_in_json(self):
         r"""Test serialization when var args are empty."""
         config = ConfigWithBothVarArgs(base_param=200, named_param="empty")
-        json_str = config.get_config_json()
+        json_str = config.config_dumps()
         config_dict = json.loads(json_str)
 
         assert config_dict["_var_positional"] == []
@@ -310,7 +310,7 @@ class TestVarArgsJsonSerialization:
         )
 
         # Paths should be serialized as POSIX strings
-        json_str = config.get_config_json()
+        json_str = config.config_dumps()
         config_dict = json.loads(json_str)
 
         assert config_dict["_var_positional"] == ["/data/input", "/data/output"]
@@ -326,7 +326,7 @@ class TestVarArgsJsonSerialization:
             100, obj1, named_param="serializable", obj_kwarg=obj2
         )
 
-        json_str = config.get_config_json()
+        json_str = config.config_dumps()
         config_dict = json.loads(json_str)
 
         # Objects with to_dict should be serialized using that method

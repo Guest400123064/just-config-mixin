@@ -1,11 +1,14 @@
 import functools
 import inspect
-import json
 import pathlib
 from copy import deepcopy
 from os import PathLike
-from typing import Any, TypeVar, Union
-from types import MapProxyType
+from types import MappingProxyType
+from typing import Any, Callable, TypeVar
+
+import orjson
+
+from ._json import default, option
 
 _Self = TypeVar("_Self", bound="ConfigMixin")
 
@@ -53,25 +56,13 @@ class ConfigMixin:
     0.2
     """
 
-    _private_names = [
-        "__metadata__",
-        "__jsonhook__",
-    ]
-    _internal_dict = {
-        "__metadata__": {
-            "class_name": None,
-            "using_default_values": [],
-            "args": [],
-            "kwargs": {},
-        },
-        "__jsonhook__": {},
-    }
+    _private_names = ["__notes__"]
 
     config_name = None
     ignore_for_config = []
 
     def __repr__(self) -> str:
-        return f"{self.__class__.__name__} {self.get_config_json()}"
+        return f"{self.__class__.__name__} {self.config_dumps()}"
 
     def __getattr__(self, name: str) -> Any:
         r"""Create a shortcut to access the config attributes."""
@@ -87,55 +78,33 @@ class ConfigMixin:
         msg = f"`{type(self).__name__}` object has no attribute `{name}`"
         raise AttributeError(msg)
 
-    @property
-    def config(self) -> MapProxyType:
-        r"""Returns the config of the class as a ``MapProxyType``.
+    def _register_to_config(self, **kwargs) -> None:
+        self._internal_dict = kwargs
 
-        This is used to mitigate unintended modifications to the config dictionary. Note that this
-        method does not completely rule out the possibility of modifying the config. For instance,
-        if the user access a nested dictionary or list in the config, they can still modify the
-        contents after dereferencing the nested object.
+    @property
+    def config(self) -> MappingProxyType:
+        r"""Returns the config of the class as a ``MappingProxyType``.
+
+        ``MappingProxyType`` is used to mitigate unintended modifications to the config dictionary.
+        Note that this method does not completely rule out the possibility of modifying the config.
+        For instance, if the user access a nested dictionary or list in the config, they can still
+        modify the contents after dereferencing the nested object.
 
         Returns
         -------
-        MapProxyType
-            The config of the class wrapped in ``MapProxyType``.
+        MappingProxyType
+            The config of the class wrapped in ``MappingProxyType``.
         """
-        return MapProxyType(self._internal_dict)
-
-    def register_to_config(self, **kwargs) -> None:
-        r"""Register keyword arguments to the configuration.
-
-        There are two ways to register keyword arguments to the configuration:
-
-        - By explicitly calling `register_to_config` in the ``__init__`` method of the subclass.
-        - By using the `@register_to_config` decorator (for the ``__init__`` method of the subclass).
-
-        It is recommended to use the ``@register_to_config`` decorator to register keyword arguments
-        to automatically register keyword arguments to the configuration.
-
-        Note that, multiple calls to ``register_to_config`` will raise an error to prevent updating
-        the config after the class has been instantiated since it may cause unexpected inconsistencies
-        between the config and the class attributes.
-
-        Please refer to the documentation of ``register_to_config`` decorator for usage examples.
-        """
-        if self.config_name is None:
-            msg = f"Make sure that {self.__class__.__name__} has defined a class attribute `config_name`."
-            raise NotImplementedError(msg)
-
-        if hasattr(self, "_internal_dict"):
-            msg = (
-                "`_internal_dict` is already set. Please do not call `register_to_config` again "
-                "to prevent unexpected inconsistencies between the config and the class attributes."
-            )
-            raise RuntimeError(msg)
-
-        self._internal_dict = deepcopy(kwargs)
+        return MappingProxyType(self._internal_dict)
 
     def save_config(
-        self, save_directory: str | PathLike, overwrite: bool = False
-    ) -> None:
+        self,
+        save_directory: str | PathLike,
+        *,
+        overwrite: bool = False,
+        default: Callable = default,
+        option: int = option,
+    ) -> int:
         r"""Save a configuration object to the directory specified in ``save_directory``.
 
         The configuration is saved as a JSON file named as ``self.config_name`` in the directory
@@ -150,6 +119,18 @@ class ConfigMixin:
             Directory where the configuration JSON file, named as ``self.config_name``, is saved.
         overwrite : bool, default=False
             Whether to overwrite the configuration file if it already exists.
+        default : Callable, default=configmixin.default
+            Same as the ``default`` argument in ``orjson.dumps``, which can be used to explicitly handle custom
+            objects or override default serialization behaviors. Serialization can lose information such that it
+            may not be possible to fully restore the original object without additional post-processing after
+            deserialization.
+        option : int, default=configmixin.option
+            A bitwise OR of the ``orjson`` options. Please refer to the ``orjson`` documentation for more details.
+
+        Returns
+        -------
+        int
+            The number of bytes written to the file.
         """
         if self.config_name is None:
             msg = f"Make sure that {self.__class__.__name__} has defined a class attribute `config_name`."
@@ -169,8 +150,8 @@ class ConfigMixin:
             )
             raise FileExistsError(msg)
 
-        with open(file, "w", encoding="utf-8") as writer:
-            writer.write(self.get_config_json())
+        with open(file, "wb") as writer:
+            return writer.write(self.config_dumps(default=default, option=option))
 
     @classmethod
     def from_config(
@@ -213,18 +194,20 @@ class ConfigMixin:
                 msg = f"Provided path ({save_directory}) does not contain a file named {cls.config_name}"
                 raise FileNotFoundError(msg)
 
-            with open(file, encoding="utf-8") as reader:
-                config = json.load(reader)
+            with open(file, "rb") as reader:
+                config = orjson.loads(reader.read())
 
-        if config.get("_class_name") != cls.__name__:
+        notes = config.get("__notes__", {})
+        if notes.get("class_name") != cls.__name__:
             msg = f"Config {cls.config_name} is not a config for {cls.__name__}."
             raise ValueError(msg)
 
-        pooled_kwargs = deepcopy(config) | (runtime_kwargs or {})
-        for name in cls._meta_names:
+        pooled_kwargs = cls.apply_param_hooks(deepcopy(config)) | (runtime_kwargs or {})
+        for name in cls._private_names:
             pooled_kwargs.pop(name, None)
 
         signature = inspect.signature(cls)
+
         args = []
         for name, param in signature.parameters.items():
             if param.kind not in {
@@ -237,17 +220,53 @@ class ConfigMixin:
                 raise KeyError(msg)
             args.append(pooled_kwargs.pop(name))
 
-        args.extend(config.get("_var_positional", []))
-        pooled_kwargs = pooled_kwargs | config.get("_var_keyword", {})
+        args.extend(notes.get("args", []))
+        pooled_kwargs = pooled_kwargs | notes.get("kwargs", {})
 
         return cls(*args, **pooled_kwargs)
 
-    def get_config_json(self) -> str:
+    @classmethod
+    def apply_param_hooks(cls, jdict: dict[str, Any]) -> dict[str, Any]:
+        r"""Apply post-processing hooks to the JSON dictionary.
+
+        ``orjson.loads`` only decode configs to primitive types, which may not be directly
+        consumable by the class initializer. For instance, a ``dataclass`` object will be
+        loaded as a dictionary. Therefore, this method is intended to be overridden by the
+        subclass to perform additional post-processing on the loaded config dictionary.
+
+        Note that, it is highly discouraged to abuse this method to deserialize complex objects
+        and one should consider using ``runtime_kwargs`` argument of ``from_config`` instead,
+        to explicitly pass the complex objects to the class initializer.
+
+        By default, this method returns the input dictionary unchanged.
+
+        Parameters
+        ----------
+        jdict : dict[str, Any]
+            The config dictionary after deserialization.
+
+        Returns
+        -------
+        dict[str, Any]
+            The config dictionary after post-processing.
+        """
+        return jdict
+
+    def config_dumps(self, default=default, option=option) -> str:
         r"""Serializes the configurations to a JSON string.
 
-        In addition to the config parameters, the JSON string also includes a few metadata such as the class
-        name and which argument values were registered from default values. Metadata will have a leading
-        underscore to indicate that they are not part of the class initialization parameters.
+        In addition to the config parameters, the JSON string also includes a few metadata (with dunder keys) such
+        as the class name and which argument values were registered from default values.
+
+        Parameters
+        ----------
+        default : Callable, default=configmixin.default
+            Same as the ``default`` argument in ``orjson.dumps``, which can be used to explicitly handle custom
+            objects or override default serialization behaviors. Serialization can lose information such that it
+            may not be possible to fully restore the original object without additional post-processing after
+            deserialization.
+        option : int, default=configmixin.option
+            A bitwise OR of the ``orjson`` options. Please refer to the ``orjson`` documentation for more details.
 
         Returns
         -------
@@ -256,21 +275,16 @@ class ConfigMixin:
             Note that ignored config parameters (specified via ``ignore_for_config``) are not included in
             the JSON string.
         """
-        return json.dumps(
-            self._internal_dict,
-            sort_keys=True,
-            indent=2,
-        )
+        return orjson.dumps(self._internal_dict, default=default, option=option)
 
 
 def register_to_config(init):
     r"""Decorator for the init of classes inheriting from `ConfigMixin` for auto argument-registration.
 
     Users should apply this decorator to the ``__init__(self, ...)`` method of the subclass so that all
-    the arguments are automatically sent to ``self.register_to_config``. To ignore a specific argument
+    the arguments are automatically sent to ``self._register_to_config``. To ignore a specific argument
     accepted by the init but that shouldn't be registered in the config, use the ``ignore_for_config``
-    class variable. **Note that**, once decorated, all private arguments (beginning with an underscore)
-    are trashed and not sent to the init!
+    class variable.
 
     Examples
     --------
@@ -312,15 +326,19 @@ def register_to_config(init):
             )
             raise RuntimeError(msg)
 
+        if self.config_name is None:
+            msg = f"Make sure that {self.__class__.__name__} has defined a class attribute `config_name`."
+            raise NotImplementedError(msg)
+
         signature = inspect.signature(self.__class__)
 
         ignore_for_config = set(getattr(self, "ignore_for_config", []))
         registered_kwargs = {
-            "_class_name": self.__class__.__name__,
-            "_use_default_values": [],
-            "_var_positional": tuple(args[_num_non_var_positional(signature) :]),
-            "_var_keyword": FrozenDict(
-                {
+            "__notes__": {
+                "class_name": self.__class__.__name__,
+                "using_default_values": [],
+                "args": args[_num_non_var_positional(signature) :],
+                "kwargs": {
                     name: param
                     for name, param in kwargs.items()
                     if not (
@@ -328,8 +346,8 @@ def register_to_config(init):
                         or name in ignore_for_config
                         or name.startswith("_")
                     )
-                }
-            ),
+                },
+            },
         }
 
         # Obtain the names corresponding to positional arguments.
@@ -360,9 +378,9 @@ def register_to_config(init):
                 continue
             if param.default is not inspect.Parameter.empty:
                 registered_kwargs[name] = param.default
-                registered_kwargs["_use_default_values"].append(name)
+                registered_kwargs["__notes__"]["using_default_values"].append(name)
 
-        getattr(self, "register_to_config")(**registered_kwargs)
+        self._register_to_config(**registered_kwargs)
         init(self, *args, **kwargs)
 
     return inner_init

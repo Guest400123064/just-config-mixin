@@ -333,7 +333,7 @@ def assert_config_json_valid(config_instance: ConfigMixin) -> None:
     AssertionError
         If the JSON is invalid or missing required fields.
     """
-    json_str = config_instance.get_config_json()
+    json_str = config_instance.config_dumps()
     config_dict = json.loads(json_str)
 
     # Check required metadata fields

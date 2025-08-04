@@ -234,7 +234,7 @@ class TestJSONSerialization:
     def test_basic_json_serialization(self):
         r"""Test basic JSON serialization of config."""
         config = BaseConfig(param1=123, param2="json_test")
-        json_str = config.get_config_json()
+        json_str = config.config_dumps()
 
         # Should be valid JSON
         config_dict = json.loads(json_str)
@@ -250,7 +250,7 @@ class TestJSONSerialization:
             optional_param="not_none",
         )
 
-        json_str = config.get_config_json()
+        json_str = config.config_dumps()
         config_dict = json.loads(json_str)
 
         assert config_dict["list_param"] == [1, 2, 3]
@@ -260,7 +260,7 @@ class TestJSONSerialization:
     def test_json_serialization_pathlib_conversion(self):
         r"""Test that pathlib.Path objects are converted to strings."""
         config = ConfigWithComplexTypes(path_param=pathlib.Path("/json/path"))
-        json_str = config.get_config_json()
+        json_str = config.config_dumps()
         config_dict = json.loads(json_str)
 
         # Path should be converted to POSIX string
@@ -269,7 +269,7 @@ class TestJSONSerialization:
     def test_json_sorted_keys(self):
         r"""Test that JSON output has sorted keys."""
         config = BaseConfig(param1=1, param2="test", param3=[1])
-        json_str = config.get_config_json()
+        json_str = config.config_dumps()
 
         # Parse and check key order
         config_dict = json.loads(json_str)
