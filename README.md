@@ -11,7 +11,7 @@ An ultra lightweight configuration management library for machine learning inspi
 ## Features
 
 - 🔗 **Mixin Pattern**: Add config management to models, trainers, or any class
-- 💾 **Save/Load**: Automatic JSON serialization with type preservation
+- 💾 **Save/Load**: Automatic JSON serialization with customizable serialization logic
 - ⚡ **Decorator Support**: `@register_to_config` for automatic parameter registration
 - 🎯 **Selective Exclusion**: Control which parameters are saved to config
 
