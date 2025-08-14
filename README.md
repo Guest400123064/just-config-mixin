@@ -79,10 +79,6 @@ loaded_model = TransformerModel.from_config(save_directory="./checkpoints/experi
 # Or load from config dict
 config_dict = {"vocab_size": 50000, "hidden_size": 512, "num_layers": 6, "dropout": 0.2}
 model_from_dict = TransformerModel.from_config(config=config_dict)
-
-# Access config as attributes
-print(loaded_model.hidden_size)
-print(loaded_model.config.num_layers)
 ```
 
 ### 3. Training Pipeline with Ignored Parameters

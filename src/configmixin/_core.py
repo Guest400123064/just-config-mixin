@@ -67,20 +67,6 @@ class ConfigMixin:
     def __repr__(self) -> str:
         return f"{self.__class__.__name__} {self.config_dumps()}"
 
-    def __getattr__(self, name: str) -> Any:
-        r"""Create a shortcut to access the config attributes."""
-
-        is_in_config = "_internal_dict" in self.__dict__ and hasattr(
-            self.__dict__["_internal_dict"], name
-        )
-        is_attribute = name in self.__dict__
-
-        if is_in_config and not is_attribute:
-            return self._internal_dict[name]
-
-        msg = f"`{type(self).__name__}` object has no attribute `{name}`"
-        raise AttributeError(msg)
-
     def _register_to_config(self, **kwargs) -> None:
         self._internal_dict = kwargs
 
