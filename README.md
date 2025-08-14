@@ -6,7 +6,7 @@
 
 # configmixin
 
-An ultra lightweight configuration management library for machine learning inspired by the Hugging Face 🤗 [`diffusers`](https://github.com/huggingface/diffusers) library. Add automatic configuration handling to any class with a simple mixin pattern. Please refer to the [documentation](https://guest400123064.github.io/configmixin/) for more details.
+An ultra lightweight configuration management library for machine learning inspired by the Hugging Face 🤗 [`diffusers`](https://github.com/huggingface/diffusers) library. Add automatic configuration handling to any class with a simple mixin pattern. Please refer to the [documentation](https://guest400123064.github.io/just-config-mixin/) for more details.
 
 ## Features
 
@@ -37,6 +37,7 @@ pip install git+https://github.com/Guest400123064/configmixin.git
 import torch.nn as nn
 from configmixin import ConfigMixin, register_to_config
 
+
 class TransformerModel(nn.Module, ConfigMixin):
     config_name = "model_config.json"
 
@@ -61,9 +62,9 @@ class TransformerModel(nn.Module, ConfigMixin):
             for _ in range(num_layers)
         ])
 
-# Create model with custom config
+
 model = TransformerModel(hidden_size=1024, num_layers=24)
-print(model.config)  # FrozenDict with all parameters
+print(model.config)
 ```
 
 ### 2. Configuration Save/Load
@@ -80,8 +81,8 @@ config_dict = {"vocab_size": 50000, "hidden_size": 512, "num_layers": 6, "dropou
 model_from_dict = TransformerModel.from_config(config=config_dict)
 
 # Access config as attributes
-print(loaded_model.hidden_size)  # 1024
-print(loaded_model.config.num_layers)  # 24
+print(loaded_model.hidden_size)
+print(loaded_model.config.num_layers)
 ```
 
 ### 3. Training Pipeline with Ignored Parameters
