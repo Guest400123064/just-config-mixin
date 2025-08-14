@@ -144,28 +144,6 @@ loaded_model = TransformerModel.from_config(save_directory=experiment_dir)
 loaded_trainer = ModelTrainer.from_config(save_directory=experiment_dir, runtime_kwargs={"model": loaded_model})
 ```
 
-## API Reference
-
-### ConfigMixin
-
-**Class Attributes:**
-- `config_name`: Required filename for config JSON
-- `ignore_for_config`: List of parameters to exclude from config
-
-**Methods:**
-- `save_config(save_directory, overwrite=False)`: Save config to JSON
-- `from_config(config=None, save_directory=None, runtime_kwargs=None)`: Load instance from config
-- `config`: Property returning configuration as FrozenDict
-- `get_config_json()`: Get config as JSON string
-
-**Decorator:**
-- `@register_to_config`: Auto-register `__init__` parameters
-
-**Parameter Exclusion Rules:**
-- Parameters in `ignore_for_config` are excluded
-- Parameters starting with `_` are automatically excluded
-- Runtime objects can be passed via `runtime_kwargs` in `from_config()`
-
 ## Why configmixin?
 
 Perfect for ML workflows where you need:
