@@ -1,6 +1,7 @@
 import functools
 import inspect
 import pathlib
+import re
 from copy import deepcopy
 from os import PathLike
 from types import MappingProxyType
@@ -11,6 +12,7 @@ import orjson
 from ._json import default, option
 
 _Self = TypeVar("_Self", bound="ConfigMixin")
+_IGNORE_REGEX = re.compile(r"^_")
 
 
 class ConfigMixin:
@@ -49,7 +51,7 @@ class ConfigMixin:
     ...
     >>> model = MyModel(hidden_size=1024, _num_layers=20, dropout=0.2)
     >>> model.config
-    FrozenDict([('_use_default_values', []), ('hidden_size', 1024)])
+    mappingproxy({'__notes__': {'class_name': 'MyModel', 'using_default_values': [], 'args': (), 'kwargs': {}}, 'hidden_size': 1024})
     >>> model.num_layers
     20
     >>> model.dropout
@@ -255,8 +257,8 @@ class ConfigMixin:
     def config_dumps(self, default=default, option=option) -> str:
         r"""Serializes the configurations to a JSON string.
 
-        In addition to the config parameters, the JSON string also includes a few metadata (with dunder keys) such
-        as the class name and which argument values were registered from default values.
+        In addition to the config parameters, the JSON string also includes metadata in the '__notes__' field such
+        as the class name, which argument values were registered from default values, and any variable arguments.
 
         Parameters
         ----------
@@ -308,9 +310,9 @@ def register_to_config(init):
     ...         self.num_layers = _num_layers
     ...         self.dropout = dropout  # This will be ignored because of the specification in `ignore_for_config`
     ...
-    >>> model = MyModel(hidden_size=1024, _num_layers=20, dropout=0.2)
+    >>> model = MyModel(_num_layers=20, dropout=0.2)
     >>> model.config
-    FrozenDict([('_use_default_values', []), ('hidden_size', 1024)])
+    mappingproxy({'__notes__': {'class_name': 'MyModel', 'using_default_values': ['hidden_size'], 'args': (), 'kwargs': {}}, 'hidden_size': 768})
     >>> model.num_layers
     20
     >>> model.dropout
@@ -343,8 +345,7 @@ def register_to_config(init):
                     for name, param in kwargs.items()
                     if not (
                         name in signature.parameters
-                        or name in ignore_for_config
-                        or name.startswith("_")
+                        or _is_ignored_name(name, ignore_for_config)
                     )
                 },
             },
@@ -359,7 +360,7 @@ def register_to_config(init):
         for name, param in zip(signature.parameters.keys(), args):
             if signature.parameters[name].kind is inspect.Parameter.VAR_POSITIONAL:
                 break
-            if name in ignore_for_config or name.startswith("_"):
+            if _is_ignored_name(name, ignore_for_config):
                 continue
             registered_kwargs[name] = param
 
@@ -371,7 +372,7 @@ def register_to_config(init):
         for name, param in filter(
             lambda i: i[0] not in registered_kwargs, signature.parameters.items()
         ):
-            if name in ignore_for_config or name.startswith("_"):
+            if _is_ignored_name(name, ignore_for_config):
                 continue
             if name in kwargs:
                 registered_kwargs[name] = kwargs[name]
@@ -384,6 +385,10 @@ def register_to_config(init):
         init(self, *args, **kwargs)
 
     return inner_init
+
+
+def _is_ignored_name(name: str, ignore_for_config: list[str]) -> bool:
+    return name in ignore_for_config or _IGNORE_REGEX.match(name) is not None
 
 
 def _num_non_var_positional(signature: inspect.Signature) -> int:
