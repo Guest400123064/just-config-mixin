@@ -12,6 +12,7 @@ import orjson
 from ._json import default, option
 
 _Self = TypeVar("_Self", bound="ConfigMixin")
+
 _IGNORE_REGEX = re.compile(r"^_")
 
 
