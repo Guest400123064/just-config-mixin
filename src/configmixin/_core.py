@@ -166,7 +166,8 @@ class ConfigMixin:
 
         Returns
         -------
-        An instance of the class.
+        ConfigMixin
+            An instance of the class.
         """
         if config is None:
             if save_directory is None:
@@ -265,6 +266,19 @@ class ConfigMixin:
             the JSON string.
         """
         return orjson.dumps(self._internal_dict, default=default, option=option)
+
+    def spawn(self) -> "ConfigMixin":
+        r"""Spawn a duplication of the current instance **without state inheritance**.
+
+        This method creates a new instance of the same class with the same configuration. Note that the
+        state (e.g., weights of a model) is not inherited.
+
+        Returns
+        -------
+        ConfigMixin
+            The duplicated instance.
+        """
+        return self.from_config(config=dict(self.config))
 
 
 def register_to_config(init):
