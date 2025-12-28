@@ -65,7 +65,7 @@ class ConfigMixin:
     ignore_for_config = []
 
     def __repr__(self) -> str:
-        return f"{self.__class__.__name__} {self.config_dumps()}"
+        return f"{self.__class__.__name__} {self.config_dumps().decode()}"
 
     def _register_to_config(self, **kwargs) -> None:
         self._internal_dict = kwargs
@@ -241,7 +241,7 @@ class ConfigMixin:
         """
         return jdict
 
-    def config_dumps(self, default=default, option=option) -> str:
+    def config_dumps(self, default=default, option=option) -> bytes:
         r"""Serializes the configurations to a JSON string.
 
         In addition to the config parameters, the JSON string also includes metadata in the '__notes__' field such
@@ -259,8 +259,8 @@ class ConfigMixin:
 
         Returns
         -------
-        str
-            String containing all the attributes that make up the configuration instance in JSON format.
+        bytes
+            Byte string containing all the attributes that make up the configuration instance in JSON format.
             Note that ignored config parameters (specified via ``ignore_for_config``) are not included in
             the JSON string.
         """
