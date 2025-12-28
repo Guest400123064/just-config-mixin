@@ -267,18 +267,24 @@ class ConfigMixin:
         """
         return orjson.dumps(self._internal_dict, default=default, option=option)
 
-    def spawn(self) -> "ConfigMixin":
+    def spawn(self, runtime_kwargs: dict[str, Any] = None) -> "ConfigMixin":
         r"""Spawn a duplication of the current instance **without state inheritance**.
 
         This method creates a new instance of the same class with the same configuration. Note that the
         state (e.g., weights of a model) is not inherited.
+
+        Parameters
+        ----------
+        runtime_kwargs : dict[str, Any], default=None
+            A dictionary of the runtime kwargs. These are usually non-serializable parameters that need to be
+            determined/initialized at runtime, such as the model object of a trainer class.
 
         Returns
         -------
         ConfigMixin
             The duplicated instance.
         """
-        return self.from_config(config=dict(self.config))
+        return self.from_config(config=dict(self.config), runtime_kwargs=runtime_kwargs)
 
 
 def register_to_config(init):
