@@ -41,7 +41,7 @@ jobs:
       run: uv sync --group dev
 
     - name: Generate coverage report
-      run: uv run pytest --cov=tensorblob --cov-report=xml --junitxml=junit.xml -o junit_family=legacy
+      run: uv run pytest --cov=configmixin --cov-report=xml --junitxml=junit.xml -o junit_family=legacy
 
     - name: Upload coverage to Codecov
       if: ${{ !cancelled() }}
