@@ -1,6 +1,6 @@
 [project]
 name = "just-config-mixin"
-version = "0.1.1"
+dynamic = ["version"]
 description = "Yet another config mixin/manager."
 authors = [{ name = "guest400123064", email = "wangy49@seas.upenn.edu" }]
 packages = [{ include = "configmixin", from = "src" }]
@@ -9,20 +9,25 @@ readme = "README.md"
 requires-python = ">=3.10"
 dependencies = ["orjson (>=3.11.1,<4.0.0)"]
 
-[build-system]
-requires = ["poetry-core>=2.0.0,<3.0.0"]
-build-backend = "poetry.core.masonry.api"
+[dependency-groups]
+dev = [
+    "bpython>=0.25",
+    "coverage>=7.9.2",
+    "pdoc>=15.0.4",
+    "pre-commit>=4.2.0",
+    "pytest>=8.4.1",
+    "ruff>=0.12.4",
+]
 
-[tool.poetry]
-packages = [{ include = "configmixin", from = "src" }]
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.version]
+path = "src/configmixin/__init__.py"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/configmixin"]
 
 [tool.coverage.run]
 omit = ["tests/*"]
-
-[tool.poetry.group.development.dependencies]
-pytest = "^8.4.1"
-pdoc = "^15.0.4"
-ruff = "^0.12.4"
-bpython = "^0.25"
-pre-commit = "^4.2.0"
-coverage = "^7.9.2"

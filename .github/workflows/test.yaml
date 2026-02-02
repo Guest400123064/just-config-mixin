@@ -32,25 +32,28 @@ jobs:
       with:
         python-version: ${{ matrix.python-version }}
 
-    - name: Install Poetry
-      run: |
-        python -m pip install -U pip
-        pip install --upgrade poetry
+    - name: Install uv
+      uses: astral-sh/setup-uv@v6
+      with:
+        python-version: ${{ matrix.python-version }}
 
     - name: Install dependencies
-      run: poetry install --with development
-
-    - name: Run tests
-      run: poetry run coverage run -m pytest tests
+      run: uv sync --group dev
 
     - name: Generate coverage report
-      run: |
-        poetry run coverage combine || true
-        poetry run coverage xml
-        poetry run coverage report
+      run: uv run pytest --cov=tensorblob --cov-report=xml --junitxml=junit.xml -o junit_family=legacy
 
-    - name: Upload coverage reports to Codecov
-      uses: codecov/codecov-action@v5
+    - name: Upload coverage to Codecov
+      if: ${{ !cancelled() }}
+      uses: codecov/codecov-action@v4
       with:
         token: ${{ secrets.CODECOV_TOKEN }}
-        slug: Guest400123064/configmixin
+        files: ./coverage.xml
+        fail_ci_if_error: false
+        verbose: true
+
+    - name: Upload test results to Codecov
+      if: ${{ !cancelled() }}
+      uses: codecov/test-results-action@v1
+      with:
+        token: ${{ secrets.CODECOV_TOKEN }}
