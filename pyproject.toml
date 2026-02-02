@@ -9,7 +9,6 @@ readme = "README.md"
 requires-python = ">=3.10"
 dependencies = [
     "orjson (>=3.11.1,<4.0.0)",
-    "pytest-cov>=7.0.0",
 ]
 
 [dependency-groups]
@@ -19,6 +18,7 @@ dev = [
     "pdoc>=15.0.4",
     "pre-commit>=4.2.0",
     "pytest>=8.4.1",
+    "pytest-cov>=7.0.0",
     "ruff>=0.12.4",
 ]
 

@@ -526,7 +526,6 @@ name = "just-config-mixin"
 source = { editable = "." }
 dependencies = [
     { name = "orjson" },
-    { name = "pytest-cov" },
 ]
 
 [package.dev-dependencies]
@@ -536,14 +535,12 @@ dev = [
     { name = "pdoc" },
     { name = "pre-commit" },
     { name = "pytest" },
+    { name = "pytest-cov" },
     { name = "ruff" },
 ]
 
 [package.metadata]
-requires-dist = [
-    { name = "orjson", specifier = ">=3.11.1,<4.0.0" },
-    { name = "pytest-cov", specifier = ">=7.0.0" },
-]
+requires-dist = [{ name = "orjson", specifier = ">=3.11.1,<4.0.0" }]
 
 [package.metadata.requires-dev]
 dev = [
@@ -552,6 +549,7 @@ dev = [
     { name = "pdoc", specifier = ">=15.0.4" },
     { name = "pre-commit", specifier = ">=4.2.0" },
     { name = "pytest", specifier = ">=8.4.1" },
+    { name = "pytest-cov", specifier = ">=7.0.0" },
     { name = "ruff", specifier = ">=0.12.4" },
 ]
 
