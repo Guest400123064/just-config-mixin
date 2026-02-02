@@ -12,6 +12,7 @@ dependencies = ["orjson (>=3.11.1,<4.0.0)"]
 [dependency-groups]
 dev = [
     "bpython>=0.25",
+    "bump-my-version>=1.2.6",
     "coverage>=7.9.2",
     "pdoc>=15.0.4",
     "pre-commit>=4.2.0",
@@ -28,6 +29,19 @@ path = "src/configmixin/__init__.py"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/configmixin"]
+
+[tool.bumpversion]
+current_version = "0.1.1"
+parse = "(?P<major>\\d+)\\.(?P<minor>\\d+)\\.(?P<patch>\\d+)"
+serialize = ["{major}.{minor}.{patch}"]
+search = "__version__ = \"{current_version}\""
+replace = "__version__ = \"{new_version}\""
+commit = false
+tag = false
+message = "Bump version: {current_version} → {new_version}"
+
+[[tool.bumpversion.files]]
+filename = "src/configmixin/__init__.py"
 
 [tool.coverage.run]
 omit = ["tests/*"]
