@@ -25,20 +25,16 @@ jobs:
         python-version: ['3.10', '3.11', '3.12']
 
     steps:
-    - uses: actions/checkout@v3
-
-    - name: Set up Python ${{ matrix.python-version }}
-      uses: actions/setup-python@v4
-      with:
-        python-version: ${{ matrix.python-version }}
+    - uses: actions/checkout@v4
 
     - name: Install uv
       uses: astral-sh/setup-uv@v6
       with:
         python-version: ${{ matrix.python-version }}
+        enable-cache: true
 
     - name: Install dependencies
-      run: uv sync --group dev
+      run: uv sync --locked --group dev
 
     - name: Generate coverage report
       run: uv run pytest --cov=configmixin --cov-report=xml --junitxml=junit.xml -o junit_family=legacy

@@ -1,9 +1,8 @@
 [project]
 name = "just-config-mixin"
-dynamic = ["version"]
+version = "0.1.1"
 description = "Yet another config mixin/manager."
 authors = [{ name = "guest400123064", email = "wangy49@seas.upenn.edu" }]
-packages = [{ include = "configmixin", from = "src" }]
 license = { file = "LICENSE" }
 readme = "README.md"
 requires-python = ">=3.10"
@@ -23,14 +22,12 @@ dev = [
 ]
 
 [build-system]
-requires = ["hatchling"]
-build-backend = "hatchling.build"
+requires = ["uv_build>=0.9.7,<0.10.0"]
+build-backend = "uv_build"
 
-[tool.hatch.version]
-path = "src/configmixin/__init__.py"
-
-[tool.hatch.build.targets.wheel]
-packages = ["src/configmixin"]
+[tool.uv.build-backend]
+module-name = "configmixin"
+module-root = "src"
 
 [tool.coverage.run]
 omit = ["tests/*"]

@@ -1,4 +1,5 @@
 import functools
+import importlib
 import inspect
 import pathlib
 import re
@@ -14,6 +15,11 @@ from ._json import default, option
 _Self = TypeVar("_Self", bound="ConfigMixin")
 
 _IGNORE_REGEX = re.compile(r"^_")
+
+#: Marker key injected into the serialized representation of a nested ``ConfigMixin``
+#: instance. It allows :meth:`ConfigMixin.from_config` to detect, during deserialization,
+#: which nested dictionaries should be reconstructed back into ``ConfigMixin`` instances.
+CONFIGMIXIN_MARKER = "__is_configmixin__"
 
 
 class ConfigMixin:
@@ -52,14 +58,14 @@ class ConfigMixin:
     ...
     >>> model = MyModel(hidden_size=1024, _num_layers=20, dropout=0.2)
     >>> model.config
-    mappingproxy({'__notes__': {'class_name': 'MyModel', 'using_default_values': [], 'args': (), 'kwargs': {}}, 'hidden_size': 1024})
+    mappingproxy({'__notes__': {'class_name': '__main__.MyModel', 'using_default_values': [], 'args': (), 'kwargs': {}}, 'hidden_size': 1024})
     >>> model.num_layers
     20
     >>> model.dropout
     0.2
     """
 
-    _private_names = ["__notes__"]
+    _private_names = ["__notes__", CONFIGMIXIN_MARKER]
 
     config_name = None
     ignore_for_config = []
@@ -188,11 +194,19 @@ class ConfigMixin:
                 config = orjson.loads(reader.read())
 
         notes = config.get("__notes__", {})
-        if notes.get("class_name") != cls.__name__:
+        if notes.get("class_name") != _qualified_name(cls):
             msg = f"Config {cls.config_name} is not a config for {cls.__name__}."
             raise ValueError(msg)
 
-        pooled_kwargs = cls.apply_param_hooks(deepcopy(config)) | (runtime_kwargs or {})
+        # Rebuild nested ``ConfigMixin`` instances before applying hooks. Only the values
+        # are decoded so a root-level marker (present when this config is itself nested) is
+        # left in place and later dropped via ``_private_names``.
+        config = {
+            key: _decode_configmixins(item) for key, item in deepcopy(config).items()
+        }
+        notes = config.get("__notes__", {})
+
+        pooled_kwargs = cls.apply_param_hooks(config) | (runtime_kwargs or {})
         for name in cls._private_names:
             pooled_kwargs.pop(name, None)
 
@@ -264,8 +278,17 @@ class ConfigMixin:
             Byte string containing all the attributes that make up the configuration instance in JSON format.
             Note that ignored config parameters (specified via ``ignore_for_config``) are not included in
             the JSON string.
+
+        Notes
+        -----
+        Parameter values that are themselves ``ConfigMixin`` instances (including those nested inside
+        lists, tuples, or dictionaries) are serialized recursively. Each nested instance is tagged with
+        a private ``__is_configmixin__`` marker so that ``from_config`` can transparently reconstruct it
+        during deserialization.
         """
-        return orjson.dumps(self._internal_dict, default=default, option=option)
+        return orjson.dumps(
+            _encode_configmixins(self._internal_dict), default=default, option=option
+        )
 
     def spawn(self, runtime_kwargs: dict[str, Any] = None) -> "ConfigMixin":
         r"""Spawn a duplication of the current instance **without state inheritance**.
@@ -319,7 +342,7 @@ def register_to_config(init):
     ...
     >>> model = MyModel(_num_layers=20, dropout=0.2)
     >>> model.config
-    mappingproxy({'__notes__': {'class_name': 'MyModel', 'using_default_values': ['hidden_size'], 'args': (), 'kwargs': {}}, 'hidden_size': 768})
+    mappingproxy({'__notes__': {'class_name': '__main__.MyModel', 'using_default_values': ['hidden_size'], 'args': (), 'kwargs': {}}, 'hidden_size': 768})
     >>> model.num_layers
     20
     >>> model.dropout
@@ -344,7 +367,7 @@ def register_to_config(init):
         ignore_for_config = set(getattr(self, "ignore_for_config", []))
         registered_kwargs = {
             "__notes__": {
-                "class_name": self.__class__.__name__,
+                "class_name": _qualified_name(self.__class__),
                 "using_default_values": [],
                 "args": args[_num_non_var_positional(signature) :],
                 "kwargs": {
@@ -392,6 +415,55 @@ def register_to_config(init):
         init(self, *args, **kwargs)
 
     return inner_init
+
+
+def _qualified_name(cls: type) -> str:
+    r"""Return the fully-qualified ``module.qualname`` of a class."""
+    return f"{cls.__module__}.{cls.__qualname__}"
+
+
+def _resolve_class(qualified_name: str) -> type:
+    r"""Resolve a class from the name produced by :func:`_qualified_name`.
+
+    Only module-level classes can be reconstructed, so the name splits cleanly into a
+    module path and a single attribute.
+    """
+    module_name, _, attr = qualified_name.rpartition(".")
+    return getattr(importlib.import_module(module_name), attr)
+
+
+def _encode_configmixins(value: Any) -> Any:
+    r"""Recursively replace nested ``ConfigMixin`` instances with serializable dicts.
+
+    Each nested instance becomes its config dict tagged with the ``__is_configmixin__``
+    marker; containers are traversed so instances at any depth are handled. Everything
+    else is returned untouched for ``orjson`` (and ``default``) to serialize.
+    """
+    if isinstance(value, ConfigMixin):
+        encoded = _encode_configmixins(value._internal_dict)
+        encoded[CONFIGMIXIN_MARKER] = True
+        return encoded
+    if isinstance(value, dict):
+        return {key: _encode_configmixins(item) for key, item in value.items()}
+    if isinstance(value, (list, tuple)):
+        return [_encode_configmixins(item) for item in value]
+    return value
+
+
+def _decode_configmixins(value: Any) -> Any:
+    r"""Recursively rebuild nested ``ConfigMixin`` instances flagged with the marker.
+
+    Any dict carrying ``__is_configmixin__`` is reconstructed via the ``from_config`` of
+    the class named in its ``__notes__``; containers are traversed for nested instances.
+    """
+    if isinstance(value, dict):
+        if value.get(CONFIGMIXIN_MARKER):
+            target_cls = _resolve_class(value["__notes__"]["class_name"])
+            return target_cls.from_config(config=value)
+        return {key: _decode_configmixins(item) for key, item in value.items()}
+    if isinstance(value, list):
+        return [_decode_configmixins(item) for item in value]
+    return value
 
 
 def _is_ignored_name(name: str, ignore_for_config: list[str]) -> bool:

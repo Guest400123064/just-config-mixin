@@ -185,8 +185,8 @@ class TestBasicConfigIO:
         assert "args" in notes
         assert "kwargs" in notes
 
-        # Check values
-        assert notes["class_name"] == "BasicConfig"
+        # Check values (class_name is now fully-qualified with the module path)
+        assert notes["class_name"] == f"{BasicConfig.__module__}.{BasicConfig.__qualname__}"
         assert "learning_rate" in notes["using_default_values"]
         assert "name" in notes["using_default_values"]
         assert saved_data["hidden_size"] == 512

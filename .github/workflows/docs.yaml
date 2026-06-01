@@ -19,18 +19,21 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v6
         with:
           python-version: '3.10'
+          enable-cache: true
 
-      # ADJUST THIS: install all dependencies (including pdoc)
-      - run: pip install -e .
-      - run: pip install pdoc
+      # Install the package together with the dev group (which provides pdoc).
+      - name: Install dependencies
+        run: uv sync --locked --group dev
 
-      # ADJUST THIS: build your documentation into docs/.
-      # We use a custom build script for pdoc itself, ideally you just run `pdoc -o docs/ ...` here.
-      - run: |
-          pdoc src/configmixin \
+      # Build the documentation into docs/.
+      - name: Build documentation
+        run: |
+          uv run pdoc src/configmixin \
             -o docs \
             -t docs/theme \
             --docformat numpy
